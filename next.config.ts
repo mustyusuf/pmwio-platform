@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // better-sqlite3 is a native module — keep it out of the bundler so it loads
+  // directly from node_modules at runtime.
+  serverExternalPackages: ["better-sqlite3", "@prisma/adapter-better-sqlite3"],
 };
 
 export default nextConfig;

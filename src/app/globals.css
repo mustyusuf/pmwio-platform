@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand palette — forest & deep green (from the logo), crimson accent,
+     warm ivory/sand backgrounds. */
+  --color-brand-50: #ede7da;  /* sand — section backgrounds */
+  --color-brand-100: #dce8df; /* light green */
+  --color-brand-200: #bcd6c4;
+  --color-brand-300: #8fbb9f;
+  --color-brand-400: #5c9b73;
+  --color-brand-500: #2f8251;
+  --color-brand-600: #1f7343;
+  --color-brand-700: #1a6b3a; /* forest green — primary */
+  --color-brand-800: #155730;
+  --color-brand-900: #1a3a2a; /* deep green — nav, headings, body */
+  --color-brand-950: #122719; /* darkest — sidebar, hero */
+
+  /* Crimson accent — CTAs & highlights (from the ribbon/swirl) */
+  --color-crimson-400: #d5564a;
+  --color-crimson-500: #c0392b;
+  --color-crimson-600: #a52e22;
+
+  --color-emerald-deep: #0f766e;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f1eb; /* warm ivory */
+  --foreground: #1a3a2a; /* deep green */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Offset anchored sections so they aren't hidden behind the sticky navbar */
+section[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* WYSIWYG editor + rendered rich text */
+.rte:empty::before {
+  content: attr(data-placeholder);
+  color: #cbb1bf;
+  pointer-events: none;
+}
+.rte ul,
+.rich-html ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.rte ol,
+.rich-html ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.rte p,
+.rich-html p {
+  margin: 0.4rem 0;
+}
+.rich-html {
+  font-size: 0.875rem;
+  line-height: 1.5;
 }

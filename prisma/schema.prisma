@@ -1,0 +1,266 @@
+// Pious Muslim Women International Organization — data model
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// Every account on the system. `role` determines the dashboard and permissions.
+/// `userId` is the public, human-readable ID (e.g. "PMW-7F3K9Q"); for Members it
+/// also serves as their Referee ID.
+model User {
+  id           String   @id @default(cuid())
+  userId       String   @unique // public ID / Referee ID, e.g. "PMW-7F3K9Q"
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String?
+  country      String?
+  role         String   @default("MEMBER") // EXECUTIVE | BOARD | ADMIN | FINANCE | COORDINATOR | MEMBER | BENEFICIARY
+  active       Boolean  @default(true)
+  approved     Boolean  @default(true) // self-registered members start false until an admin approves
+  states       String? // JSON array of states a State Coordinator represents
+  imagePath    String? // uploaded profile image (stored filename)
+  createdAt    DateTime @default(now())
+
+  passwordResets PasswordReset[]
+  termReports    TermReport[] @relation("CoordinatorReports")
+
+  // Applications this user submitted as a beneficiary.
+  applications Application[] @relation("Beneficiary")
+  // Applications this user (a Member) referred.
+  referred     Application[] @relation("Referrer")
+  // Reviews/recommendations this user authored (referee/board/executive).
+  reviews      Review[]
+  notifications Notification[]
+  activityLogs ActivityLog[]
+  payments         Payment[]         @relation("PaymentApprover")
+  paymentsCreated  Payment[]         @relation("PaymentCreator")
+  paymentApprovals PaymentApproval[]
+}
+
+/// A beneficiary's request for support. Moves through a multi-stage workflow:
+/// PENDING_REFEREE → PENDING_BOARD → PENDING_EXECUTIVE → APPROVED / REJECTED.
+model Application {
+  id        String @id @default(cuid())
+  reference String @unique // short human reference, e.g. "F6N6TO8B"
+  category  String // EMPOWERMENT | ORPHANAGE | SCHOLARSHIP
+  status    String @default("PENDING_REFEREE")
+
+  // Applicant details (also denormalized onto the beneficiary account).
+  fullName String
+  email    String
+  phone    String?
+  country  String?
+  details  String
+
+  amountRequested Float?
+
+  // Scholarship award period + renewal lineage.
+  scholarshipStart DateTime?
+  scholarshipEnd   DateTime?
+  renewedFromId    String? // the prior application this one renews
+
+  // Extra, type-specific form fields stored as a JSON string (guardian, NIN,
+  // school details, empowerment cover letter & sustainability plan, etc.).
+  formData String?
+
+  // Beneficiary account (the applicant).
+  beneficiaryId String?
+  beneficiary   User?   @relation("Beneficiary", fields: [beneficiaryId], references: [id])
+
+  // Referral: the Member who vouches for the beneficiary.
+  referredByCode String // the User ID (Referee ID) entered on the form
+  referredById   String? // resolved FK to the referring Member
+  referredBy     User?   @relation("Referrer", fields: [referredById], references: [id])
+
+  // Denormalized recommendation from the Board (latest).
+  boardRecommendation String? // APPROVE | REJECT
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reviews     Review[]
+  documents   Document[]
+  payments    Payment[]
+  termReports TermReport[]
+}
+
+/// A State Coordinator's per-term report on a scholarship beneficiary's
+/// academic performance, including their position in class and (optionally) an
+/// uploaded result. Visible to the Board and Executive.
+model TermReport {
+  id               String   @id @default(cuid())
+  applicationId    String
+  application      Application @relation(fields: [applicationId], references: [id])
+  coordinatorId    String
+  coordinator      User     @relation("CoordinatorReports", fields: [coordinatorId], references: [id])
+  session          String // e.g. "2025/2026"
+  term             String // e.g. "First term"
+  position         Int? // position in class
+  classSize        Int? // number of students in the class
+  performance      String // narrative report
+  resultStoredName String? // uploaded result file (in ./uploads)
+  resultMime       String?
+  createdAt        DateTime @default(now())
+}
+
+/// A comment / recommendation attached to an application by a referee, board
+/// member or executive. Forms the application's audit trail.
+model Review {
+  id             String   @id @default(cuid())
+  applicationId  String
+  application    Application @relation(fields: [applicationId], references: [id])
+  reviewerId     String
+  reviewer       User     @relation(fields: [reviewerId], references: [id])
+  reviewerRole   String // REFEREE | BOARD | EXECUTIVE
+  recommendation String // CONFIRM | REJECT | APPROVE | RECOMMEND_APPROVE | RECOMMEND_REJECT
+  comment        String?
+  createdAt      DateTime @default(now())
+}
+
+/// A document submitted in support of an application. Files aren't stored as
+/// binaries here — we record the document's name/type and a reference/link.
+model Document {
+  id            String   @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  name          String
+  type          String? // e.g. "National ID", "School result", "Applicant photo"
+  reference     String? // filename or external link
+  storedName    String? // filename on disk (in ./uploads) for uploaded files
+  mimeType      String?
+  size          Int? // bytes
+  submittedAt   DateTime @default(now())
+}
+
+/// A single-use, time-limited password reset token.
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String // sha-256 of the reset token
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// A disbursement to a beneficiary for an approved application. Entered by a
+/// Finance officer, then approved up the chain: Finance → Board → Executive.
+model Payment {
+  id            String   @id @default(cuid())
+  applicationId String?
+  application   Application? @relation(fields: [applicationId], references: [id])
+  amount        Float
+  // PENDING_BOARD | PENDING_EXECUTIVE | COMPLETED | REJECTED
+  status        String   @default("PENDING_BOARD")
+  method        String?
+  reference     String? // bank reference / transfer note
+
+  createdById   String? // the Finance officer who entered the payment
+  createdBy     User?    @relation("PaymentCreator", fields: [createdById], references: [id])
+  approvedById  String? // the Executive who gave final approval
+  approvedBy    User?    @relation("PaymentApprover", fields: [approvedById], references: [id])
+
+  createdAt     DateTime @default(now())
+  paidAt        DateTime?
+
+  approvals     PaymentApproval[]
+}
+
+/// One approval/rejection on a payment at a given level (Board or Executive).
+/// The payment advances once the configured quorum of approvals is reached.
+model PaymentApproval {
+  id         String   @id @default(cuid())
+  paymentId  String
+  payment    Payment  @relation(fields: [paymentId], references: [id])
+  approverId String
+  approver   User     @relation(fields: [approverId], references: [id])
+  role       String // BOARD | EXECUTIVE
+  decision   String // APPROVE | REJECT
+  comment    String?
+  createdAt  DateTime @default(now())
+}
+
+/// Singleton organization settings, including approval quorums.
+model Settings {
+  id              String   @id @default("singleton")
+  boardQuorum     Int      @default(2) // approvals needed at the Board stage
+  executiveQuorum Int      @default(2) // approvals needed at the Executive stage
+  empowermentOpen Boolean  @default(false) // is the members' empowerment window open?
+  updatedAt       DateTime @updatedAt
+}
+
+/// An admin-defined custom field added to an application form. Rendered
+/// dynamically on the relevant program's form and stored in Application.formData.
+model FormField {
+  id        String   @id @default(cuid())
+  category  String // SCHOLARSHIP | ORPHANAGE | EMPOWERMENT | ALL
+  label     String
+  name      String // key used in formData JSON
+  type      String   @default("text") // text | textarea | number | select
+  options   String? // JSON array of choices (for select)
+  required  Boolean  @default(false)
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+/// An uploaded gallery image, managed by the Administrator and shown (filtered
+/// by category) on the public landing/gallery pages.
+model GalleryImage {
+  id         String   @id @default(cuid())
+  category   String // EMPOWERMENT | ORPHANAGE | SCHOLARSHIP | EVENTS
+  caption    String
+  storedName String // filename on disk in ./uploads
+  mimeType   String?
+  size       Int?
+  active     Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+/// An in-app notification for a user.
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// An organizational project (used for "Active Projects" + program performance).
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  category  String? // EMPOWERMENT | ORPHANAGE | SCHOLARSHIP
+  status    String   @default("ACTIVE") // ACTIVE | COMPLETED
+  startDate DateTime?
+  createdAt DateTime @default(now())
+}
+
+/// A scheduled activity/event (used for "Upcoming Activities").
+model Activity {
+  id        String   @id @default(cuid())
+  title     String
+  date      DateTime
+  location  String?
+  createdAt DateTime @default(now())
+}
+
+/// An audit-log entry of an action taken on the system (for the Administrator).
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+}
