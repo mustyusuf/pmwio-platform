@@ -5,6 +5,10 @@ import { MarketingHero } from "@/components/MarketingHero";
 import { GallerySection } from "@/components/GallerySection";
 import { getGalleryItems } from "@/lib/gallery";
 
+// Reads gallery items from the database, so render at request time rather than
+// statically at build time (the DB does not exist during the Docker build).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Gallery",
   description: "Photos from our empowerment, orphanage, scholarship and community work.",

@@ -7,6 +7,10 @@ import { MarketingHero } from "@/components/MarketingHero";
 import { DonationForm } from "@/components/forms/DonationForm";
 import { formatMoney } from "@/lib/format";
 
+// Reads a donation campaign from the database, so render at request time rather
+// than statically at build time (the DB does not exist during the Docker build).
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const campaign = await prisma.donationCampaign.findUnique({ where: { slug }, select: { title: true, description: true } });

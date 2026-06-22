@@ -7,6 +7,10 @@ import { ProgramIcon } from "@/components/ProgramIcon";
 import { getGalleryItems } from "@/lib/gallery";
 import { ORG, PROGRAMS, IMPACT_STATS } from "@/lib/content";
 
+// Reads gallery items from the database, so render at request time rather than
+// statically at build time (the DB does not exist during the Docker build).
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const galleryItems = await getGalleryItems();
   return (

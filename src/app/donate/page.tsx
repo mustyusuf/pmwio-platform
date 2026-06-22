@@ -8,6 +8,10 @@ import { MarketingHero } from "@/components/MarketingHero";
 import { DonationForm } from "@/components/forms/DonationForm";
 import { formatMoney } from "@/lib/format";
 
+// Reads donation campaigns from the database, so render at request time rather
+// than statically at build time (the DB does not exist during the Docker build).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Donate",
   description: "Support PMWIO's orphanage care, scholarships and women empowerment work.",
