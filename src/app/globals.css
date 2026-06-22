@@ -4,8 +4,8 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
   /* Brand palette — forest & deep green (from the logo), crimson accent,
-     warm ivory/sand backgrounds. */
-  --color-brand-50: #ede7da;  /* sand — section backgrounds */
+     light ash backgrounds. */
+  --color-brand-50: #f1f3f2;  /* light ash — section backgrounds */
   --color-brand-100: #dce8df; /* light green */
   --color-brand-200: #bcd6c4;
   --color-brand-300: #8fbb9f;
@@ -26,7 +26,7 @@
 }
 
 :root {
-  --background: #f5f1eb; /* warm ivory */
+  --background: #f6f7f7; /* light ash */
   --foreground: #1a3a2a; /* deep green */
 }
 

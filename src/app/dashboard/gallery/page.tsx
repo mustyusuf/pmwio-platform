@@ -7,7 +7,7 @@ import { GALLERY_CATEGORIES } from "@/lib/content";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, EmptyState } from "@/components/dashboard/ui";
 import { GalleryUploadForm } from "@/components/dashboard/GalleryUploadForm";
-import { deleteGalleryImage, toggleGalleryImage } from "@/app/actions/gallery";
+import { deleteGalleryImage, importLegacyGalleryImages, toggleGalleryImage } from "@/app/actions/gallery";
 
 export const metadata: Metadata = { title: "Gallery" };
 
@@ -22,11 +22,16 @@ export default async function GalleryAdminPage() {
 
   return (
     <>
-      <PageHeader title="Gallery" count={images.length} subtitle="Upload photos and assign them to a category. They appear, filtered by category, on the public gallery." />
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <PageHeader
+        title="Gallery"
+        count={images.length}
+        subtitle="Upload photos and assign them to a category. They appear, filtered by category, on the public gallery."
+        action={<GalleryUploadForm />}
+      />
+      <div className="space-y-6">
         <Panel title="Photos">
           {images.length === 0 ? (
-            <EmptyState>No images yet. Upload your first photo on the right.</EmptyState>
+            <EmptyState>No images yet. Use the Upload image button to add your first photo.</EmptyState>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {images.map((g) => (
@@ -57,8 +62,15 @@ export default async function GalleryAdminPage() {
           )}
         </Panel>
 
-        <Panel title="Upload an image">
-          <GalleryUploadForm />
+        <Panel title="Import website images">
+          <p className="text-sm leading-relaxed text-brand-900/65">
+            Add the images extracted from the old website to this managed gallery. This keeps the upload flow available for future photos.
+          </p>
+          <form action={importLegacyGalleryImages} className="mt-4">
+            <button className="rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800">
+              Import website images
+            </button>
+          </form>
         </Panel>
       </div>
     </>

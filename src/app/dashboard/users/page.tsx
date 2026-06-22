@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, EmptyState, formatDate } from "@/components/dashboard/ui";
 import { CreateUserForm } from "@/components/dashboard/CreateUserForm";
 import { UsersManagementTable } from "@/components/dashboard/UsersManagementTable";
-import { approveMember, rejectMember } from "@/app/actions/workflow";
+import { MemberApprovalActions } from "@/components/dashboard/MemberApprovalActions";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -32,7 +32,12 @@ export default async function UsersPage() {
 
   return (
     <>
-      <PageHeader title="Users" count={users.length} subtitle="Approve new members, manage accounts and create staff users." />
+      <PageHeader
+        title="Users"
+        count={users.length}
+        subtitle="Approve new members, manage accounts and create staff users."
+        action={<CreateUserForm />}
+      />
 
       {/* Pending member approvals */}
       <Panel title="Pending member approvals" className="mb-6" action={pending.length > 0 ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{pending.length} waiting</span> : undefined}>
@@ -46,28 +51,14 @@ export default async function UsersPage() {
                   <p className="font-medium text-brand-900">{p.name}</p>
                   <p className="text-xs text-brand-900/50">{p.email}{p.country ? ` · ${p.country}` : ""} · registered {formatDate(p.createdAt)}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <form action={approveMember}>
-                    <input type="hidden" name="userId" value={p.id} />
-                    <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Approve</button>
-                  </form>
-                  <form action={rejectMember}>
-                    <input type="hidden" name="userId" value={p.id} />
-                    <button className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">Decline</button>
-                  </form>
-                </div>
+                <MemberApprovalActions userId={p.id} name={p.name} />
               </li>
             ))}
           </ul>
         )}
       </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-        <UsersManagementTable rows={rows} selfId={user.id} />
-        <Panel title="Create a user">
-          <CreateUserForm />
-        </Panel>
-      </div>
+      <UsersManagementTable rows={rows} selfId={user.id} />
     </>
   );
 }

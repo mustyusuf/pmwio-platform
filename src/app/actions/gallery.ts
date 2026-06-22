@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
 import { saveUpload } from "@/lib/uploads";
+import { LEGACY_GALLERY_IMAGES } from "@/lib/legacyImages";
 
 export type GalleryState = { ok?: boolean; error?: string } | null;
 
@@ -65,6 +66,38 @@ export async function toggleGalleryImage(formData: FormData) {
   const active = String(formData.get("active")) === "true";
   await prisma.galleryImage.update({ where: { id }, data: { active } });
   await prisma.activityLog.create({ data: { userId: me.id, action: active ? "GALLERY_IMAGE_SHOWN" : "GALLERY_IMAGE_HIDDEN", detail: id } });
+  revalidatePath("/dashboard/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
+}
+
+export async function importLegacyGalleryImages() {
+  const me = await requireAdmin();
+  let imported = 0;
+
+  for (const item of LEGACY_GALLERY_IMAGES) {
+    const existing = await prisma.galleryImage.findFirst({
+      where: { storedName: item.src },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    const max = await prisma.galleryImage.aggregate({ where: { category: item.category }, _max: { order: true } });
+    await prisma.galleryImage.create({
+      data: {
+        category: item.category,
+        caption: item.caption,
+        storedName: item.src,
+        mimeType: item.mimeType,
+        order: (max._max.order ?? 0) + 1,
+      },
+    });
+    imported++;
+  }
+
+  await prisma.activityLog.create({
+    data: { userId: me.id, action: "GALLERY_LEGACY_IMPORTED", detail: `${imported} images imported from old website` },
+  });
   revalidatePath("/dashboard/gallery");
   revalidatePath("/gallery");
   revalidatePath("/");

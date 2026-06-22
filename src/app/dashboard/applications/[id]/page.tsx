@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeft, ExternalLink, FileText, ImageIcon, RefreshCw, Save } from "lucide-react";
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { isStaff, ROLES, ROLE_LABEL } from "@/lib/roles";
@@ -120,7 +121,9 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   return (
     <>
       <div className="mb-4">
-        <Link href="/dashboard/applications" className="text-sm font-semibold text-brand-700 hover:text-brand-900">← Back to applications</Link>
+        <Link href="/dashboard/applications" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-900">
+          <ArrowLeft className="h-4 w-4" aria-hidden />Back to applications
+        </Link>
       </div>
       <PageHeader
         title={app.fullName}
@@ -295,14 +298,18 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                     <div><label className="text-xs text-brand-900/50">Start date</label><input type="date" name="start" defaultValue={app.scholarshipStart ? new Date(app.scholarshipStart).toISOString().slice(0, 10) : ""} className="mt-1 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm" /></div>
                     <div><label className="text-xs text-brand-900/50">End date</label><input type="date" name="end" defaultValue={app.scholarshipEnd ? new Date(app.scholarshipEnd).toISOString().slice(0, 10) : ""} className="mt-1 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm" /></div>
                   </div>
-                  <button className="rounded-lg bg-brand-700 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-800">Save period</button>
+                  <button className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-800">
+                    <Save className="h-3.5 w-3.5" aria-hidden />Save period
+                  </button>
                 </form>
               )}
 
               {app.status === "APPROVED" && (isStaff(user.role) || app.beneficiaryId === user.id) && (
                 <form action={renewScholarship} className="mt-3 border-t border-brand-100 pt-3">
                   <input type="hidden" name="applicationId" value={app.id} />
-                  <button className="rounded-lg border border-brand-300 px-4 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50">Re-apply / renew scholarship</button>
+                  <button className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-4 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50">
+                    <RefreshCw className="h-3.5 w-3.5" aria-hidden />Re-apply / renew scholarship
+                  </button>
                   <p className="mt-1 text-[11px] text-brand-900/40">Creates a fresh application for the next period.</p>
                 </form>
               )}
@@ -322,7 +329,10 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                   return (
                     <li key={d.id} className="rounded-xl border border-brand-100 p-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-brand-900">{isImage ? "🖼️" : "📄"} {d.name}</span>
+                        <span className="inline-flex items-center gap-2 font-medium text-brand-900">
+                          {isImage ? <ImageIcon className="h-4 w-4" aria-hidden /> : <FileText className="h-4 w-4" aria-hidden />}
+                          {d.name}
+                        </span>
                         <span className="text-xs text-brand-900/40">{formatDate(d.submittedAt)}</span>
                       </div>
                       <p className="mt-0.5 text-xs text-brand-900/50">{d.type ?? "Document"}{d.size ? ` · ${humanSize(d.size)}` : ""}</p>
@@ -333,8 +343,9 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                         </a>
                       )}
                       {href && (
-                        <a href={href} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-700 hover:text-brand-900">
-                          {isPdf ? "Open PDF →" : isImage ? "View full size →" : "Open file →"}
+                        <a href={href} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-900">
+                          {isPdf ? "Open PDF" : isImage ? "View full size" : "Open file"}
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                         </a>
                       )}
                     </li>

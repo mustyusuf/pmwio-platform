@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { CircleCheckBig } from "lucide-react";
 import { submitEmpowerment, type EmpowermentState } from "@/app/actions/empowerment";
 import { RichTextEditor } from "@/components/forms/RichTextEditor";
 import type { CustomField } from "@/components/forms/ApplyForm";
@@ -20,7 +21,8 @@ export function EmpowermentForm({
   if (state?.ok) {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-        <h3 className="text-lg font-bold text-emerald-900">Application submitted ✓</h3>
+        <CircleCheckBig className="mx-auto h-8 w-8 text-emerald-700" aria-hidden />
+        <h3 className="mt-2 text-lg font-bold text-emerald-900">Application submitted</h3>
         <p className="mt-1 text-sm text-emerald-800">Reference <span className="font-mono font-bold">{state.reference}</span>. It is now with the Board for review.</p>
       </div>
     );

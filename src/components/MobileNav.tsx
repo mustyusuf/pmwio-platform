@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Menu, X } from "lucide-react";
 
 type NavLink = { href: string; label: string };
 
@@ -23,13 +24,7 @@ export function MobileNav({
         aria-expanded={open}
         className="grid h-10 w-10 place-items-center rounded-lg text-brand-900 hover:bg-brand-50"
       >
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2}>
-          {open ? (
-            <path strokeLinecap="round" d="M6 6l12 12M6 18L18 6" />
-          ) : (
-            <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
-          )}
-        </svg>
+        {open ? <X className="h-6 w-6" aria-hidden /> : <Menu className="h-6 w-6" aria-hidden />}
       </button>
 
       {open && (

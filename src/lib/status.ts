@@ -10,6 +10,8 @@ export const STATUS_LABEL: Record<string, string> = {
   // Payment statuses
   PENDING: "Pending",
   COMPLETED: "Completed",
+  SUCCESS: "Successful",
+  FAILED: "Failed",
 };
 
 export const STATUS_STYLE: Record<string, string> = {
@@ -22,6 +24,8 @@ export const STATUS_STYLE: Record<string, string> = {
   // Payment statuses
   PENDING: "bg-amber-100 text-amber-800",
   COMPLETED: "bg-emerald-100 text-emerald-800",
+  SUCCESS: "bg-emerald-100 text-emerald-800",
+  FAILED: "bg-red-100 text-red-700",
 };
 
 export const PENDING_STATUSES = ["PENDING_REFEREE", "PENDING_BOARD", "PENDING_EXECUTIVE"];

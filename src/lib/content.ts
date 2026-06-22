@@ -17,7 +17,6 @@ export const PROGRAMS: {
   title: string;
   short: string;
   description: string;
-  icon: string; // emoji used as a lightweight icon
 }[] = [
   {
     key: "EMPOWERMENT",
@@ -25,7 +24,6 @@ export const PROGRAMS: {
     short: "Skills, startup capital & support for women.",
     description:
       "We equip women with vocational skills, mentorship and startup capital so they can build sustainable livelihoods and lift their families out of poverty.",
-    icon: "🌱",
   },
   {
     key: "ORPHANAGE",
@@ -33,7 +31,6 @@ export const PROGRAMS: {
     short: "Love, shelter and care for orphaned children.",
     description:
       "We find, fund and provide loving care, shelter, nutrition and healthcare for orphaned and vulnerable children — because every child deserves the chance to thrive.",
-    icon: "🤲",
   },
   {
     key: "SCHOLARSHIP",
@@ -41,7 +38,6 @@ export const PROGRAMS: {
     short: "Education for brilliant & needy public-school students.",
     description:
       "We fund tuition, books and learning materials for brilliant but financially-disadvantaged students in public schools, opening the door to a brighter future.",
-    icon: "🎓",
   },
 ];
 

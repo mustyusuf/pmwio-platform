@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GraduationCap, HandHeart, Search, Sprout } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MarketingHero } from "@/components/MarketingHero";
@@ -11,10 +12,10 @@ export const metadata: Metadata = {
 };
 
 const APPROACH = [
-  { t: "Find & Fund", d: "We identify the most vulnerable women and children in our communities and mobilise the resources needed to support them.", icon: "🔍" },
-  { t: "Provide Care", d: "We deliver shelter, nutrition, clothing and healthcare to orphans and widows, restoring dignity and hope.", icon: "🤲" },
-  { t: "We Educate", d: "We fund tuition, books and materials so brilliant, needy students can stay in school and thrive.", icon: "🎓" },
-  { t: "We Empower", d: "We equip women with vocational skills, mentorship and startup capital to build sustainable livelihoods.", icon: "🌱" },
+  { t: "Find & Fund", d: "We identify the most vulnerable women and children in our communities and mobilise the resources needed to support them.", Icon: Search },
+  { t: "Provide Care", d: "We deliver shelter, nutrition, clothing and healthcare to orphans and widows, restoring dignity and hope.", Icon: HandHeart },
+  { t: "We Educate", d: "We fund tuition, books and materials so brilliant, needy students can stay in school and thrive.", Icon: GraduationCap },
+  { t: "We Empower", d: "We equip women with vocational skills, mentorship and startup capital to build sustainable livelihoods.", Icon: Sprout },
 ];
 
 const VALUES = [
@@ -83,7 +84,9 @@ export default function AboutPage() {
           <div className="mt-10 grid gap-6 sm:grid-cols-2">
             {APPROACH.map((a) => (
               <div key={a.t} className="rounded-3xl border border-brand-100 bg-white p-6 shadow-sm">
-                <div className="text-3xl">{a.icon}</div>
+                <div className="grid h-12 w-12 place-items-center rounded-xl bg-brand-100 text-brand-700">
+                  <a.Icon className="h-6 w-6" aria-hidden strokeWidth={1.8} />
+                </div>
                 <h3 className="mt-3 text-lg font-bold text-brand-900">{a.t}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-brand-900/70">{a.d}</p>
               </div>

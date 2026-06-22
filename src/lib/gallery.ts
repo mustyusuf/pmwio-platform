@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { GALLERY } from "@/lib/content";
+import { LEGACY_GALLERY_IMAGES } from "@/lib/legacyImages";
 
 export type GalleryDTO = { id: string; category: string; caption: string; src: string };
 
@@ -12,6 +13,9 @@ export async function getGalleryItems(): Promise<GalleryDTO[]> {
   });
   if (imgs.length > 0) {
     return imgs.map((g) => ({ id: g.id, category: g.category, caption: g.caption, src: `/api/gallery/${g.id}` }));
+  }
+  if (LEGACY_GALLERY_IMAGES.length > 0) {
+    return LEGACY_GALLERY_IMAGES.map((g) => ({ id: g.id, category: g.category, caption: g.caption, src: g.src }));
   }
   return GALLERY.map((g) => ({
     id: g.id,

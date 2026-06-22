@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Panel, EmptyState, StatusBadge, formatDate } from "@/components/dashboard/ui";
 
@@ -15,7 +16,11 @@ export async function ScholarshipPeriods() {
   return (
     <Panel
       title="Scholarship periods"
-      action={<Link href="/dashboard/beneficiaries?program=SCHOLARSHIP" className="text-xs font-semibold text-brand-700 hover:text-brand-900">View all →</Link>}
+      action={
+        <Link href="/dashboard/beneficiaries?program=SCHOLARSHIP" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-900">
+          View all <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
+      }
     >
       {apps.length === 0 ? (
         <EmptyState>No scholarship applications yet.</EmptyState>

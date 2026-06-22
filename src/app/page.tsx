@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { ArrowRight, HeartHandshake } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { GallerySection } from "@/components/GallerySection";
+import { ProgramIcon } from "@/components/ProgramIcon";
 import { getGalleryItems } from "@/lib/gallery";
 import { ORG, PROGRAMS, IMPACT_STATS } from "@/lib/content";
 
@@ -45,6 +47,12 @@ export default async function HomePage() {
                 className="rounded-full bg-brand-600 px-7 py-3.5 text-center text-base font-semibold text-white ring-1 ring-white/30 transition hover:bg-brand-500"
               >
                 Apply for support
+              </Link>
+              <Link
+                href="/donate"
+                className="rounded-full bg-crimson-600 px-7 py-3.5 text-center text-base font-semibold text-white ring-1 ring-white/20 transition hover:bg-crimson-500"
+              >
+                Donate now
               </Link>
             </div>
 
@@ -140,8 +148,8 @@ export default async function HomePage() {
                   key={p.key}
                   className="flex flex-col rounded-3xl border border-brand-100 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                 >
-                  <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-100 text-3xl">
-                    {p.icon}
+                  <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-100 text-brand-700">
+                    <ProgramIcon program={p.key} />
                   </div>
                   <h3 className="mt-5 text-xl font-bold text-brand-900">
                     {p.title}
@@ -159,7 +167,7 @@ export default async function HomePage() {
                       className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900"
                     >
                       Apply for {p.title}
-                      <span aria-hidden>→</span>
+                      <ArrowRight className="h-4 w-4" aria-hidden />
                     </Link>
                   )}
                 </div>
@@ -170,6 +178,30 @@ export default async function HomePage() {
 
         {/* ---------- Gallery ---------- */}
         <GallerySection items={galleryItems.slice(0, 8)} />
+
+        {/* ---------- Donation ---------- */}
+        <section className="bg-brand-950 py-20 text-white">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-[1.2fr_1fr]">
+            <div>
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white/10 text-crimson-400 ring-1 ring-white/10">
+                <HeartHandshake className="h-7 w-7" aria-hidden />
+              </div>
+              <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-brand-300">Support our mission</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Turn compassion into practical support.</h2>
+              <p className="mt-4 max-w-2xl leading-relaxed text-brand-200">
+                Your donation helps provide food, healthcare, education and sustainable livelihood support. Give once, support a current appeal, or contribute monthly as a member.
+              </p>
+            </div>
+            <div className="rounded-3xl bg-white p-7 text-brand-950 shadow-xl">
+              <h3 className="text-xl font-bold">Every contribution matters</h3>
+              <p className="mt-3 text-sm leading-relaxed text-brand-900/65">Choose a general donation or direct your gift to one of our active event and fundraising campaigns.</p>
+              <Link href="/donate" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-crimson-600 px-6 py-3.5 font-semibold text-white transition hover:bg-crimson-700">
+                Make a secure donation <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+              <p className="mt-3 text-center text-xs text-brand-900/45">Payments are processed securely by Paystack.</p>
+            </div>
+          </div>
+        </section>
 
         {/* ---------- Membership CTA ---------- */}
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">

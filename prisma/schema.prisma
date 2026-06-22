@@ -29,19 +29,22 @@ model User {
   createdAt    DateTime @default(now())
 
   passwordResets PasswordReset[]
-  termReports    TermReport[] @relation("CoordinatorReports")
+  termReports    TermReport[]    @relation("CoordinatorReports")
 
   // Applications this user submitted as a beneficiary.
-  applications Application[] @relation("Beneficiary")
+  applications             Application[]             @relation("Beneficiary")
   // Applications this user (a Member) referred.
-  referred     Application[] @relation("Referrer")
+  referred                 Application[]             @relation("Referrer")
   // Reviews/recommendations this user authored (referee/board/executive).
-  reviews      Review[]
-  notifications Notification[]
-  activityLogs ActivityLog[]
-  payments         Payment[]         @relation("PaymentApprover")
-  paymentsCreated  Payment[]         @relation("PaymentCreator")
-  paymentApprovals PaymentApproval[]
+  reviews                  Review[]
+  notifications            Notification[]
+  activityLogs             ActivityLog[]
+  payments                 Payment[]                 @relation("PaymentApprover")
+  paymentsCreated          Payment[]                 @relation("PaymentCreator")
+  paymentApprovals         PaymentApproval[]
+  donations                Donation[]
+  contributionSubscription ContributionSubscription?
+  donationCampaigns        DonationCampaign[]        @relation("CampaignCreator")
 }
 
 /// A beneficiary's request for support. Moves through a multi-stage workflow:
@@ -95,11 +98,11 @@ model Application {
 /// academic performance, including their position in class and (optionally) an
 /// uploaded result. Visible to the Board and Executive.
 model TermReport {
-  id               String   @id @default(cuid())
+  id               String      @id @default(cuid())
   applicationId    String
   application      Application @relation(fields: [applicationId], references: [id])
   coordinatorId    String
-  coordinator      User     @relation("CoordinatorReports", fields: [coordinatorId], references: [id])
+  coordinator      User        @relation("CoordinatorReports", fields: [coordinatorId], references: [id])
   session          String // e.g. "2025/2026"
   term             String // e.g. "First term"
   position         Int? // position in class
@@ -107,27 +110,27 @@ model TermReport {
   performance      String // narrative report
   resultStoredName String? // uploaded result file (in ./uploads)
   resultMime       String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime    @default(now())
 }
 
 /// A comment / recommendation attached to an application by a referee, board
 /// member or executive. Forms the application's audit trail.
 model Review {
-  id             String   @id @default(cuid())
+  id             String      @id @default(cuid())
   applicationId  String
   application    Application @relation(fields: [applicationId], references: [id])
   reviewerId     String
-  reviewer       User     @relation(fields: [reviewerId], references: [id])
+  reviewer       User        @relation(fields: [reviewerId], references: [id])
   reviewerRole   String // REFEREE | BOARD | EXECUTIVE
   recommendation String // CONFIRM | REJECT | APPROVE | RECOMMEND_APPROVE | RECOMMEND_REJECT
   comment        String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime    @default(now())
 }
 
 /// A document submitted in support of an application. Files aren't stored as
 /// binaries here — we record the document's name/type and a reference/link.
 model Document {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id])
   name          String
@@ -136,7 +139,7 @@ model Document {
   storedName    String? // filename on disk (in ./uploads) for uploaded files
   mimeType      String?
   size          Int? // bytes
-  submittedAt   DateTime @default(now())
+  submittedAt   DateTime    @default(now())
 }
 
 /// A single-use, time-limited password reset token.
@@ -153,24 +156,24 @@ model PasswordReset {
 /// A disbursement to a beneficiary for an approved application. Entered by a
 /// Finance officer, then approved up the chain: Finance → Board → Executive.
 model Payment {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   applicationId String?
   application   Application? @relation(fields: [applicationId], references: [id])
   amount        Float
   // PENDING_BOARD | PENDING_EXECUTIVE | COMPLETED | REJECTED
-  status        String   @default("PENDING_BOARD")
+  status        String       @default("PENDING_BOARD")
   method        String?
   reference     String? // bank reference / transfer note
 
-  createdById   String? // the Finance officer who entered the payment
-  createdBy     User?    @relation("PaymentCreator", fields: [createdById], references: [id])
-  approvedById  String? // the Executive who gave final approval
-  approvedBy    User?    @relation("PaymentApprover", fields: [approvedById], references: [id])
+  createdById  String? // the Finance officer who entered the payment
+  createdBy    User?   @relation("PaymentCreator", fields: [createdById], references: [id])
+  approvedById String? // the Executive who gave final approval
+  approvedBy   User?   @relation("PaymentApprover", fields: [approvedById], references: [id])
 
-  createdAt     DateTime @default(now())
-  paidAt        DateTime?
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
 
-  approvals     PaymentApproval[]
+  approvals PaymentApproval[]
 }
 
 /// One approval/rejection on a payment at a given level (Board or Executive).
@@ -194,6 +197,83 @@ model Settings {
   executiveQuorum Int      @default(2) // approvals needed at the Executive stage
   empowermentOpen Boolean  @default(false) // is the members' empowerment window open?
   updatedAt       DateTime @updatedAt
+}
+
+/// A public fundraising form created by an administrator. Campaigns can be
+/// used for events, appeals, projects, or any other designated purpose.
+model DonationCampaign {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  description     String
+  goalAmount      Float?
+  suggestedAmount Float?
+  active          Boolean   @default(true)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdById     String
+  createdBy       User      @relation("CampaignCreator", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  donations Donation[]
+}
+
+/// A Paystack-backed contribution plan. Plans are reused when two members
+/// choose the same monthly amount.
+model ContributionPlan {
+  id               String   @id @default(cuid())
+  amountKobo       Int      @unique
+  paystackPlanCode String   @unique
+  createdAt        DateTime @default(now())
+
+  subscriptions ContributionSubscription[]
+}
+
+/// A member's recurring monthly contribution agreement.
+model ContributionSubscription {
+  id                       String           @id @default(cuid())
+  memberId                 String           @unique
+  member                   User             @relation(fields: [memberId], references: [id])
+  planId                   String
+  plan                     ContributionPlan @relation(fields: [planId], references: [id])
+  amount                   Float
+  status                   String           @default("PENDING") // PENDING | ACTIVE | NOT_RENEWING | PAST_DUE | DISABLED
+  paystackSubscriptionCode String?          @unique
+  paystackCustomerCode     String?
+  nextPaymentAt            DateTime?
+  lastPaymentAt            DateTime?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  donations Donation[]
+}
+
+/// A single incoming payment. Public gifts, campaign gifts, initial member
+/// contributions and subscription renewals all share this ledger.
+model Donation {
+  id             String                    @id @default(cuid())
+  reference      String                    @unique
+  type           String // GENERAL | CAMPAIGN | MEMBER_CONTRIBUTION
+  status         String                    @default("PENDING") // PENDING | SUCCESS | FAILED
+  amount         Float
+  currency       String                    @default("NGN")
+  donorName      String?
+  donorEmail     String
+  donorPhone     String?
+  anonymous      Boolean                   @default(false)
+  message        String?
+  channel        String?
+  paystackId     String?
+  paidAt         DateTime?
+  memberId       String?
+  member         User?                     @relation(fields: [memberId], references: [id])
+  campaignId     String?
+  campaign       DonationCampaign?         @relation(fields: [campaignId], references: [id])
+  subscriptionId String?
+  subscription   ContributionSubscription? @relation(fields: [subscriptionId], references: [id])
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
 }
 
 /// An admin-defined custom field added to an application form. Rendered
@@ -238,12 +318,12 @@ model Notification {
 
 /// An organizational project (used for "Active Projects" + program performance).
 model Project {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   category  String? // EMPOWERMENT | ORPHANAGE | SCHOLARSHIP
-  status    String   @default("ACTIVE") // ACTIVE | COMPLETED
+  status    String    @default("ACTIVE") // ACTIVE | COMPLETED
   startDate DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 /// A scheduled activity/event (used for "Upcoming Activities").

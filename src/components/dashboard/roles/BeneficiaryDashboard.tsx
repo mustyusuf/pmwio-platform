@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, FileText, Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { PROGRAM_LABEL } from "@/lib/content";
 import { isApproved, isPending } from "@/lib/status";
@@ -52,12 +53,18 @@ export async function BeneficiaryDashboard({ userId }: { userId: string }) {
         <div className="space-y-6">
           <Panel
             title="My applications"
-            action={<Link href="/apply" className="text-sm font-semibold text-brand-700 hover:text-brand-900">+ New application</Link>}
+            action={
+              <Link href="/apply" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900">
+                <Plus className="h-4 w-4" aria-hidden />New application
+              </Link>
+            }
           >
             {applications.length === 0 ? (
               <EmptyState>
                 You have no applications yet.{" "}
-                <Link href="/apply" className="font-semibold text-brand-700">Apply for a program →</Link>
+                <Link href="/apply" className="inline-flex items-center gap-1 font-semibold text-brand-700">
+                  Apply for a program <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
               </EmptyState>
             ) : (
               <div className="space-y-5">
@@ -113,7 +120,10 @@ export async function BeneficiaryDashboard({ userId }: { userId: string }) {
                           <ul className="mt-2 space-y-1">
                             {a.documents.map((d) => (
                               <li key={d.id} className="flex items-center justify-between text-xs text-brand-900/70">
-                                <span>📄 {d.name}{d.type ? ` · ${d.type}` : ""}</span>
+                                <span className="inline-flex items-center gap-1.5">
+                                  <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                  {d.name}{d.type ? ` · ${d.type}` : ""}
+                                </span>
                                 <span className="text-brand-900/40">{formatDate(d.submittedAt)}</span>
                               </li>
                             ))}
@@ -123,7 +133,9 @@ export async function BeneficiaryDashboard({ userId }: { userId: string }) {
                           <input type="hidden" name="applicationId" value={a.id} />
                           <input name="name" required placeholder="Document name (e.g. National ID)" className="min-w-0 flex-1 rounded-lg border border-brand-200 px-3 py-1.5 text-xs outline-none focus:border-brand-500" />
                           <input name="reference" placeholder="File name / link" className="min-w-0 flex-1 rounded-lg border border-brand-200 px-3 py-1.5 text-xs outline-none focus:border-brand-500" />
-                          <button type="submit" className="rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-800">Add</button>
+                          <button type="submit" className="inline-flex items-center gap-1 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-800">
+                            <Plus className="h-3.5 w-3.5" aria-hidden />Add
+                          </button>
                         </form>
                       </div>
                     </div>

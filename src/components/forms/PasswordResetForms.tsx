@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { ArrowLeft, KeyRound, Send } from "lucide-react";
 import { requestPasswordReset, resetPassword, type ResetRequestState, type ResetState } from "@/app/actions/profile";
 
 const label = "block text-sm font-medium text-brand-900";
@@ -23,7 +24,9 @@ export function ForgotPasswordForm() {
             <Link href={state.resetUrl} className="mt-2 inline-block break-all font-semibold text-brand-700 hover:underline">{state.resetUrl}</Link>
           </div>
         )}
-        <Link href="/login" className="inline-block text-sm font-semibold text-brand-700 hover:text-brand-900">← Back to login</Link>
+        <Link href="/login" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900">
+          <ArrowLeft className="h-4 w-4" aria-hidden />Back to login
+        </Link>
       </div>
     );
   }
@@ -35,7 +38,9 @@ export function ForgotPasswordForm() {
         <label htmlFor="identifier" className={label}>User ID or email</label>
         <input id="identifier" name="identifier" required className={input} placeholder="PMW-XXXXXX or you@example.com" />
       </div>
-      <button className="w-full rounded-xl bg-brand-700 px-5 py-3 font-semibold text-white hover:bg-brand-800">Send reset link</button>
+      <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 py-3 font-semibold text-white hover:bg-brand-800">
+        <Send className="h-4 w-4" aria-hidden />Send reset link
+      </button>
       <p className="text-center text-sm text-brand-900/60"><Link href="/login" className="font-semibold text-brand-700 hover:text-brand-900">Back to login</Link></p>
     </form>
   );
@@ -59,7 +64,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <input type="hidden" name="token" value={token} />
       <div><label htmlFor="next" className={label}>New password</label><input id="next" name="next" type="password" minLength={6} required className={input} placeholder="At least 6 characters" /></div>
       <div><label htmlFor="confirm" className={label}>Confirm new password</label><input id="confirm" name="confirm" type="password" minLength={6} required className={input} placeholder="Re-enter password" /></div>
-      <button className="w-full rounded-xl bg-brand-700 px-5 py-3 font-semibold text-white hover:bg-brand-800">Reset password</button>
+      <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 py-3 font-semibold text-white hover:bg-brand-800">
+        <KeyRound className="h-4 w-4" aria-hidden />Reset password
+      </button>
     </form>
   );
 }

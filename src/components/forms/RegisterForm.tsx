@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import { CircleCheckBig } from "lucide-react";
 import { registerAction, type AuthState } from "@/app/actions/auth";
 import { SubmitButton } from "./SubmitButton";
+import { PasswordInput } from "./PasswordInput";
 
 const label = "block text-sm font-medium text-brand-900";
 const input =
@@ -17,7 +19,7 @@ export function RegisterForm() {
   if (state?.pending) {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-        <p className="text-3xl">✓</p>
+        <CircleCheckBig className="mx-auto h-9 w-9 text-emerald-700" aria-hidden />
         <h3 className="mt-2 text-lg font-bold text-emerald-900">Registration received</h3>
         <p className="mt-2 text-sm text-emerald-800">
           Your membership is <strong>awaiting administrator approval</strong>. We&apos;ll verify your
@@ -59,11 +61,25 @@ export function RegisterForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="password" className={label}>Password</label>
-          <input id="password" name="password" type="password" required minLength={6} autoComplete="new-password" className={input} placeholder="At least 6 characters" />
+          <PasswordInput
+            id="password"
+            name="password"
+            minLength={6}
+            autoComplete="new-password"
+            className={input}
+            placeholder="At least 6 characters"
+          />
         </div>
         <div>
           <label htmlFor="confirmPassword" className={label}>Confirm password</label>
-          <input id="confirmPassword" name="confirmPassword" type="password" required minLength={6} autoComplete="new-password" className={input} placeholder="Re-enter password" />
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            minLength={6}
+            autoComplete="new-password"
+            className={input}
+            placeholder="Re-enter password"
+          />
         </div>
       </div>
 

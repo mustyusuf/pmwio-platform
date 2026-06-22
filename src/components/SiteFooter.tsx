@@ -20,6 +20,7 @@ export function SiteFooter() {
             <li><Link href="/about" className="hover:text-white">About Us</Link></li>
             <li><Link href="/programs" className="hover:text-white">What We Do</Link></li>
             <li><Link href="/gallery" className="hover:text-white">Gallery</Link></li>
+            <li><Link href="/donate" className="hover:text-white">Donate</Link></li>
             <li><Link href="/contact" className="hover:text-white">Contact</Link></li>
             <li><Link href="/apply" className="hover:text-white">Apply for a Program</Link></li>
             <li><Link href="/register" className="hover:text-white">Become a Member</Link></li>

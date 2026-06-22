@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { STATUS_LABEL, STATUS_STYLE } from "@/lib/status";
 import { PROGRAM_LABEL } from "@/lib/content";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -95,7 +96,7 @@ export function DataTable({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 border-b border-brand-100 p-4">
         <div className="relative min-w-[200px] flex-1">
-          <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-brand-900/40" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" strokeLinecap="round" /></svg>
+          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-brand-900/40" aria-hidden />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -143,7 +144,9 @@ export function DataTable({
                   ))}
                   {linkBase && (
                     <td className="whitespace-nowrap px-4 py-3 text-right">
-                      <Link href={`${linkBase}/${r.id}`} className="text-sm font-semibold text-brand-700 hover:text-brand-900">View →</Link>
+                      <Link href={`${linkBase}/${r.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900">
+                        View <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </Link>
                     </td>
                   )}
                 </tr>
@@ -166,7 +169,8 @@ export function DataTable({
               disabled={safePage === 0}
               className="rounded-lg border border-brand-200 px-3 py-1.5 text-sm font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-brand-50"
             >
-              Prev
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              <span className="sr-only">Previous page</span>
             </button>
             <span className="px-2 text-sm text-brand-900/60">{safePage + 1} / {pageCount}</span>
             <button
@@ -175,7 +179,8 @@ export function DataTable({
               disabled={safePage >= pageCount - 1}
               className="rounded-lg border border-brand-200 px-3 py-1.5 text-sm font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-brand-50"
             >
-              Next
+              <ArrowRight className="h-4 w-4" aria-hidden />
+              <span className="sr-only">Next page</span>
             </button>
           </div>
         </div>

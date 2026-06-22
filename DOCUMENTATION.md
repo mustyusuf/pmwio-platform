@@ -290,3 +290,4 @@ The app is a standard Next.js project and deploys to any Node host.
 ---
 
 *Built with Next.js, TypeScript, Tailwind CSS and Prisma.*
+

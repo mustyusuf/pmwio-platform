@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { PROGRAMS } from "@/lib/content";
 import { PENDING_STATUSES, REJECTED_STATUSES } from "@/lib/status";
@@ -61,10 +62,16 @@ export async function AdminDashboard({ selfId }: { selfId: string }) {
             <div className="flex justify-between"><span className="text-brand-900/60">Completed</span><span className="font-semibold">{completedPay.length}</span></div>
             <div className="flex justify-between"><span className="text-brand-900/60">Total disbursed</span><span className="font-semibold">{formatMoney(disbursed)}</span></div>
           </div>
-          <Link href="/dashboard/payments" className="mt-4 inline-block text-sm font-semibold text-brand-700 hover:text-brand-900">View payments →</Link>
+          <Link href="/dashboard/payments" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900">
+            View payments <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
         </Panel>
 
-        <Panel title="Recent activity" action={<Link href="/dashboard/audit" className="text-xs font-semibold text-brand-700 hover:text-brand-900">All logs →</Link>}>
+        <Panel title="Recent activity" action={
+          <Link href="/dashboard/audit" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-900">
+            All logs <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
+        }>
           {logs.length === 0 ? (
             <EmptyState>No activity yet.</EmptyState>
           ) : (

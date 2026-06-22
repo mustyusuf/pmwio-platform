@@ -138,6 +138,16 @@ npx prisma migrate dev          # apply schema changes
 
 - `DATABASE_URL` — SQLite file location (default `file:./dev.db`).
 - `SESSION_SECRET` — random secret used to sign session cookies (already generated). **Set a new one in production.**
+- `PAYSTACK_SECRET_KEY` — Paystack secret key used only by server actions and webhook verification.
+- `APP_URL` — deployed site origin used for Paystack callback URLs, e.g. `https://example.org`.
+
+Configure the Paystack webhook URL as:
+
+```text
+https://your-domain.example/api/paystack/webhook
+```
+
+Use Paystack test keys until callback verification, webhook delivery, campaign donations and monthly subscription renewals have all been tested.
 
 `.env` and the SQLite database are git-ignored.
 

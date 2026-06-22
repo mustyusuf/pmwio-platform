@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState, useTransition } from "react";
+import { ArrowRight, CircleCheckBig } from "lucide-react";
 import { submitApplication, validateReferee, type ApplyState } from "@/app/actions/apply";
 import {
   PUBLIC_PROGRAMS, SCHOLARSHIP_STATES, SCHOOL_TYPES, SCHOOL_OWNERSHIP,
@@ -60,7 +61,9 @@ export function ApplyForm({
   if (state?.ok) {
     return (
       <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 text-center">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-600 text-2xl text-white">✓</div>
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-600 text-white">
+          <CircleCheckBig className="h-7 w-7" aria-hidden />
+        </div>
         <h2 className="mt-4 text-xl font-bold text-emerald-900">Application received!</h2>
         <p className="mt-2 text-sm text-emerald-800">Your application is now awaiting confirmation from your referee. Reference number:</p>
         <p className="mt-3 inline-block rounded-lg bg-white px-4 py-2 font-mono text-lg font-bold tracking-wider text-emerald-900 ring-1 ring-emerald-200">{state.reference}</p>
@@ -70,7 +73,9 @@ export function ApplyForm({
           </div>
         )}
         <div className="mt-6 flex justify-center gap-4">
-          <Link href="/login" className="font-semibold text-brand-700 hover:text-brand-900">Log in to track →</Link>
+          <Link href="/login" className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:text-brand-900">
+            Log in to track <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
           <Link href="/" className="font-semibold text-brand-700 hover:text-brand-900">Home</Link>
         </div>
       </div>
@@ -111,7 +116,8 @@ export function ApplyForm({
         </div>
         {isValidated && (
           <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200">
-            <span aria-hidden>✓</span> {category === "SCHOLARSHIP" ? "Nominated by" : "Referred by"} {refereeName}
+            <CircleCheckBig className="h-4 w-4 shrink-0" aria-hidden />
+            {category === "SCHOLARSHIP" ? "Nominated by" : "Referred by"} {refereeName}
             {coordStates && coordStates.length > 0 ? ` · covers ${coordStates.join(", ")}` : ""}
           </p>
         )}

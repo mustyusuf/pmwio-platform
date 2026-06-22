@@ -14,7 +14,7 @@ export function StatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-5 shadow-sm ${
+      className={`rounded-2xl border p-5 shadow-[0_14px_30px_rgba(18,39,25,0.18)] ${
         accent ? "border-brand-200 bg-brand-50" : "border-brand-100 bg-white"
       }`}
     >

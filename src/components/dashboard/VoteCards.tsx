@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, Check, CircleCheckBig, X } from "lucide-react";
 import { PROGRAM_LABEL } from "@/lib/content";
 import { tally } from "@/lib/settings";
 import { formatMoney } from "@/lib/format";
@@ -26,7 +27,8 @@ function VotedBadge({ vote }: { vote: string }) {
   const ok = vote === "APPROVE";
   return (
     <span className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold ${ok ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"}`}>
-      ✓ You voted: {ok ? "Approve" : "Reject"}
+      {ok ? <CircleCheckBig className="h-4 w-4" aria-hidden /> : <X className="h-4 w-4" aria-hidden />}
+      You voted: {ok ? "Approve" : "Reject"}
     </span>
   );
 }
@@ -70,7 +72,9 @@ export function ApplicationVoteCard({
         )}
       </div>
       <p className="mt-2 text-sm text-brand-900/70">{app.details}</p>
-      <Link href={`/dashboard/applications/${app.id}`} className="mt-2 inline-block text-xs font-semibold text-brand-700 hover:text-brand-900">View full details & audit →</Link>
+      <Link href={`/dashboard/applications/${app.id}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-900">
+        View full details &amp; audit <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+      </Link>
 
       {priorComments.map((r) => (
         <p key={r.id} className="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-900/70">
@@ -87,8 +91,12 @@ export function ApplicationVoteCard({
           <input type="hidden" name="applicationId" value={app.id} />
           <textarea name="comment" rows={2} placeholder="Comment / observation (optional)…" className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:border-brand-500" />
           <div className="mt-2 flex gap-2">
-            <button type="submit" name="decision" value="APPROVE" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{approveLabel}</button>
-            <button type="submit" name="decision" value="REJECT" className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">{rejectLabel}</button>
+            <button type="submit" name="decision" value="APPROVE" className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+              <Check className="h-4 w-4" aria-hidden />{approveLabel}
+            </button>
+            <button type="submit" name="decision" value="REJECT" className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">
+              <X className="h-4 w-4" aria-hidden />{rejectLabel}
+            </button>
           </div>
         </form>
       )}
@@ -138,8 +146,12 @@ export function PaymentVoteCard({
           <input type="hidden" name="paymentId" value={payment.id} />
           <textarea name="comment" rows={2} placeholder="Comment (optional)…" className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:border-brand-500" />
           <div className="mt-2 flex gap-2">
-            <button type="submit" name="decision" value="APPROVE" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Approve payment</button>
-            <button type="submit" name="decision" value="REJECT" className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">Reject</button>
+            <button type="submit" name="decision" value="APPROVE" className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+              <Check className="h-4 w-4" aria-hidden />Approve payment
+            </button>
+            <button type="submit" name="decision" value="REJECT" className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">
+              <X className="h-4 w-4" aria-hidden />Reject
+            </button>
           </div>
         </form>
       )}

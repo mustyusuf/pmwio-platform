@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { parseStates } from "@/lib/roles";
 import { isApproved, isPending, isRejected } from "@/lib/status";
@@ -31,7 +32,11 @@ export async function CoordinatorDashboard({ userId, statesJson }: { userId: str
         <div className="space-y-6">
           <Panel
             title="My scholarship beneficiaries"
-            action={<Link href="/dashboard/scholarships" className="text-sm font-semibold text-brand-700 hover:text-brand-900">Monitor all →</Link>}
+            action={
+              <Link href="/dashboard/scholarships" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900">
+                Monitor all <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            }
           >
             {nominated.length === 0 ? (
               <EmptyState>No beneficiaries nominated yet. Share your Coordinator ID with eligible applicants in your state(s).</EmptyState>
@@ -45,7 +50,9 @@ export async function CoordinatorDashboard({ userId, statesJson }: { userId: str
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <StatusBadge status={a.status} />
-                      <Link href={`/dashboard/applications/${a.id}`} className="text-xs font-semibold text-brand-700 hover:text-brand-900">Report →</Link>
+                      <Link href={`/dashboard/applications/${a.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-900">
+                        Report <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </Link>
                     </div>
                   </li>
                 ))}

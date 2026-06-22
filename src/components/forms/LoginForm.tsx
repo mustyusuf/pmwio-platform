@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { loginAction, type AuthState } from "@/app/actions/auth";
 import { SubmitButton } from "./SubmitButton";
+import { PasswordInput } from "./PasswordInput";
 
 const label = "block text-sm font-medium text-brand-900";
 const input =
@@ -32,7 +33,13 @@ export function LoginForm() {
 
       <div>
         <label htmlFor="password" className={label}>Password</label>
-        <input id="password" name="password" type="password" required autoComplete="current-password" className={input} placeholder="Your password" />
+        <PasswordInput
+          id="password"
+          name="password"
+          autoComplete="current-password"
+          className={input}
+          placeholder="Your password"
+        />
       </div>
 
       <SubmitButton pendingText="Logging in…">Log in</SubmitButton>
