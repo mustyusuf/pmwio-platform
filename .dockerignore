@@ -1,0 +1,17 @@
+.git
+.github
+.next
+node_modules
+
+.env
+.env.*
+!.env.example
+
+dev.db
+prisma/*.db
+prisma/*.db-*
+uploads
+
+npm-debug.log*
+*.tsbuildinfo
+.DS_Store
