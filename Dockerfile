@@ -5,6 +5,10 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
+# Copy the Prisma schema + config before install: the package.json `postinstall`
+# hook runs `prisma generate`, which needs the schema to be present.
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm ci
 
 COPY . .
