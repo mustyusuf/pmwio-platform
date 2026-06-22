@@ -49,16 +49,24 @@ async function main() {
       throw new Error(`SEED_ADMIN_ROLE="${role}" is invalid. Use one of: ${VALID_ROLES.join(", ")}`);
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      console.log(`✓ Admin account already exists (${email}, ${existing.userId}). Nothing to do.`);
-      return;
-    }
-
     // Use the provided password, or generate a strong random one and print it.
     const provided = process.env.SEED_ADMIN_PASSWORD;
     const password = provided && provided.length > 0 ? provided : randomBytes(12).toString("base64url");
     const passwordHash = await bcrypt.hash(password, 10);
+
+    const reset = ["1", "true", "yes"].includes((process.env.SEED_ADMIN_RESET_PASSWORD ?? "").toLowerCase());
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      if (!reset) {
+        console.log(`✓ Admin account already exists (${email}, ${existing.userId}). Nothing to do.`);
+        console.log("  (To reset its password, re-run with SEED_ADMIN_RESET_PASSWORD=true)");
+        return;
+      }
+      await prisma.user.update({ where: { email }, data: { passwordHash, active: true, approved: true } });
+      console.log(`✓ Password reset for existing admin (${email}, ${existing.userId}).`);
+      if (!provided) console.log(`  New password: ${password}  (shown only once)`);
+      return;
+    }
 
     // Generate a unique public userId.
     let userId = generateUserId();
