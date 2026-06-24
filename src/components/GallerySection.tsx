@@ -167,10 +167,14 @@ export function GallerySection({
               style={{ transform: `translateX(-${lightbox * 100}%)` }}
             >
               {shown.map((g) => (
-                <figure key={g.id} className="flex h-full w-full flex-shrink-0 flex-col items-center justify-center px-10 py-12 sm:px-16">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={g.src} alt={g.caption} className="max-h-full max-w-full rounded-lg object-contain" draggable={false} />
-                  <figcaption className="mt-4 max-w-2xl text-center text-sm text-white/90">{g.caption}</figcaption>
+                <figure key={g.id} className="flex h-full w-full flex-shrink-0 flex-col items-center justify-center gap-4 px-6 py-12 sm:px-16">
+                  {/* Fixed-size frame so every slide is identical; the image is
+                      scaled to fit inside it (object-contain) without cropping. */}
+                  <div className="flex h-[70vh] w-full max-w-4xl items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={g.src} alt={g.caption} className="max-h-full max-w-full rounded-lg object-contain" draggable={false} />
+                  </div>
+                  <figcaption className="max-w-2xl text-center text-sm text-white/90">{g.caption}</figcaption>
                 </figure>
               ))}
             </div>
