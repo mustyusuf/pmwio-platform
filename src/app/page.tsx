@@ -32,8 +32,8 @@ export default async function HomePage() {
               A global Islamic NGO · Members across 4 continents
             </p>
             <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl md:text-6xl">
-              Together, we can build a world where every woman and child can{" "}
-              <span className="text-crimson-400">thrive</span>.
+              Pious Muslim Women{" "}
+              <span className="text-crimson-400">International Organization</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-brand-100">
               {ORG.blurb}
