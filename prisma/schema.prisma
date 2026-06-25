@@ -303,6 +303,24 @@ model GalleryImage {
   active     Boolean  @default(true)
   order      Int      @default(0)
   createdAt  DateTime @default(now())
+
+  // Optional grouping: an image may belong to an Album, or be a loose photo.
+  albumId String?
+  album   Album?  @relation(fields: [albumId], references: [id], onDelete: SetNull)
+}
+
+/// A named collection of gallery photos shown as a single cover tile that opens
+/// into a carousel of the album's images. Each album belongs to one category.
+model Album {
+  id          String    @id @default(cuid())
+  title       String
+  category    String // EMPOWERMENT | ORPHANAGE | SCHOLARSHIP | EVENTS
+  publishedAt DateTime? // date the album is published / shown to the public
+  draft       Boolean   @default(true) // drafts are hidden from the public gallery
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  images GalleryImage[]
 }
 
 /// An in-app notification for a user.

@@ -50,6 +50,109 @@ export async function uploadGalleryImage(_prev: GalleryState, formData: FormData
   return { ok: true };
 }
 
+const albumSchema = z.object({
+  title: z.string().trim().min(2, "Enter an album title."),
+  category: z.enum(["EMPOWERMENT", "ORPHANAGE", "SCHOLARSHIP", "EVENTS"], { message: "Choose a category." }),
+  publishedAt: z
+    .string()
+    .trim()
+    .optional()
+    .refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), "Enter a valid publication date."),
+  draft: z.boolean(),
+});
+
+/** Creates an album and uploads its photos in one step. */
+export async function createAlbum(_prev: GalleryState, formData: FormData): Promise<GalleryState> {
+  const me = await requireAdmin();
+  const parsed = albumSchema.safeParse({
+    title: formData.get("title"),
+    category: formData.get("category"),
+    publishedAt: formData.get("publishedAt") || undefined,
+    draft: formData.get("draft") === "on" || formData.get("draft") === "true",
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the form." };
+
+  const parsedDate = parsed.data.publishedAt ? new Date(`${parsed.data.publishedAt}T00:00:00.000Z`) : null;
+  if (
+    parsedDate
+    && (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== parsed.data.publishedAt)
+  ) {
+    return { error: "Enter a valid publication date." };
+  }
+
+  const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return { error: "Add at least one photo to the album." };
+
+  // Validate and save every file before writing anything to the database.
+  const saved: { storedName: string; mimeType: string; size: number }[] = [];
+  for (const file of files) {
+    const res = await saveUpload(file, { imagesOnly: true });
+    if (!res.ok) return { error: res.error };
+    saved.push({ storedName: res.file.storedName, mimeType: res.file.mimeType, size: res.file.size });
+  }
+
+  const maxAlbum = await prisma.album.aggregate({ where: { category: parsed.data.category }, _max: { order: true } });
+  const publishedAt = parsedDate ?? (parsed.data.draft ? null : new Date());
+
+  await prisma.album.create({
+    data: {
+      title: parsed.data.title,
+      category: parsed.data.category,
+      draft: parsed.data.draft,
+      publishedAt,
+      order: (maxAlbum._max.order ?? 0) + 1,
+      images: {
+        create: saved.map((s, i) => ({
+          category: parsed.data.category,
+          caption: parsed.data.title,
+          storedName: s.storedName,
+          mimeType: s.mimeType,
+          size: s.size,
+          order: i,
+        })),
+      },
+    },
+  });
+
+  await prisma.activityLog.create({ data: { userId: me.id, action: "GALLERY_ALBUM_CREATED", detail: `${parsed.data.category}: ${parsed.data.title} (${saved.length} photos)` } });
+  revalidatePath("/dashboard/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function deleteAlbum(formData: FormData) {
+  const me = await requireAdmin();
+  const id = String(formData.get("id"));
+  // Removing the album removes its photos too (an album is a unit).
+  await prisma.galleryImage.deleteMany({ where: { albumId: id } });
+  await prisma.album.delete({ where: { id } });
+  await prisma.activityLog.create({ data: { userId: me.id, action: "GALLERY_ALBUM_DELETED", detail: id } });
+  revalidatePath("/dashboard/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
+}
+
+/** Publish a draft album, or move a published album back to draft. */
+export async function toggleAlbumDraft(formData: FormData) {
+  const me = await requireAdmin();
+  const id = String(formData.get("id"));
+  const draft = String(formData.get("draft")) === "true";
+  const existing = await prisma.album.findUnique({ where: { id }, select: { publishedAt: true } });
+  await prisma.album.update({
+    where: { id },
+    data: {
+      draft,
+      // Stamp a publish date the first time it goes live.
+      ...(!draft && existing && !existing.publishedAt ? { publishedAt: new Date() } : {}),
+    },
+  });
+  await prisma.activityLog.create({ data: { userId: me.id, action: draft ? "GALLERY_ALBUM_DRAFTED" : "GALLERY_ALBUM_PUBLISHED", detail: id } });
+  revalidatePath("/dashboard/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
+}
+
 export async function deleteGalleryImage(formData: FormData) {
   const me = await requireAdmin();
   const id = String(formData.get("id"));

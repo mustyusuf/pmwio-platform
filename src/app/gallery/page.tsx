@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MarketingHero } from "@/components/MarketingHero";
 import { GallerySection } from "@/components/GallerySection";
-import { getGalleryItems } from "@/lib/gallery";
+import { getGalleryData } from "@/lib/gallery";
 
 // Reads gallery items from the database, so render at request time rather than
 // statically at build time (the DB does not exist during the Docker build).
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GalleryPage() {
-  const items = await getGalleryItems();
+  const { albums, photos } = await getGalleryData();
   return (
     <>
       <SiteHeader />
@@ -25,7 +25,7 @@ export default async function GalleryPage() {
         subtitle="A glimpse of the lives we touch — filter by program to see more."
       />
       <main className="py-12">
-        <GallerySection items={items} heading={false} background={false} />
+        <GallerySection albums={albums} photos={photos} heading={false} background={false} />
       </main>
       <SiteFooter />
     </>

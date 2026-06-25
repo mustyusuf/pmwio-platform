@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { GallerySection } from "@/components/GallerySection";
 import { ProgramIcon } from "@/components/ProgramIcon";
-import { getGalleryItems } from "@/lib/gallery";
+import { getGalleryData } from "@/lib/gallery";
 import { ORG, PROGRAMS, IMPACT_STATS } from "@/lib/content";
 
 // Reads gallery items from the database, so render at request time rather than
@@ -12,7 +12,7 @@ import { ORG, PROGRAMS, IMPACT_STATS } from "@/lib/content";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const galleryItems = await getGalleryItems();
+  const { albums, photos } = await getGalleryData();
   return (
     <>
       <SiteHeader />
@@ -181,7 +181,7 @@ export default async function HomePage() {
         </section>
 
         {/* ---------- Gallery ---------- */}
-        <GallerySection items={galleryItems.slice(0, 8)} />
+        <GallerySection albums={albums} photos={photos} limit={8} />
 
         {/* ---------- Donation ---------- */}
         <section className="bg-brand-950 py-20 text-white">

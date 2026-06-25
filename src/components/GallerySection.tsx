@@ -1,40 +1,65 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Images, X } from "lucide-react";
 import { GALLERY_CATEGORIES } from "@/lib/content";
-import type { GalleryDTO } from "@/lib/gallery";
+import type { GalleryAlbumDTO, GalleryPhotoDTO } from "@/lib/gallery";
 
 const TABS = [{ key: "ALL", label: "All" }, ...GALLERY_CATEGORIES];
 
+type Slide = { src: string; caption: string };
+
+function formatDate(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
 export function GallerySection({
-  items,
+  albums = [],
+  photos = [],
   heading = true,
   background = true,
+  limit,
 }: {
-  items: GalleryDTO[];
+  albums?: GalleryAlbumDTO[];
+  photos?: GalleryPhotoDTO[];
   heading?: boolean;
   background?: boolean;
+  limit?: number;
 }) {
   const [active, setActive] = useState("ALL");
-  const shown = active === "ALL" ? items : items.filter((g) => g.category === active);
-  // Only show tabs for categories that actually have images.
-  const present = new Set(items.map((i) => i.category));
+
+  // Only show tabs for categories that actually have content.
+  const present = new Set<string>([...albums.map((a) => a.category), ...photos.map((p) => p.category)]);
   const tabs = TABS.filter((t) => t.key === "ALL" || present.has(t.key));
 
-  // Index of the image open in the lightbox, or null when closed.
-  const [lightbox, setLightbox] = useState<number | null>(null);
-  const open = lightbox !== null;
+  const shownAlbums = active === "ALL" ? albums : albums.filter((a) => a.category === active);
+  const shownPhotos = active === "ALL" ? photos : photos.filter((p) => p.category === active);
 
-  const close = useCallback(() => setLightbox(null), []);
+  // Optional cap on total tiles (used for the homepage teaser).
+  const albumTiles = limit ? shownAlbums.slice(0, limit) : shownAlbums;
+  const photoTiles = limit ? shownPhotos.slice(0, Math.max(0, limit - albumTiles.length)) : shownPhotos;
+  const hasContent = albumTiles.length > 0 || photoTiles.length > 0;
+
+  // Lightbox carousel — a list of slides plus the active index, or null.
+  const [viewer, setViewer] = useState<{ slides: Slide[]; index: number } | null>(null);
+  const open = viewer !== null;
+
+  const close = useCallback(() => setViewer(null), []);
   const prev = useCallback(
-    () => setLightbox((i) => (i === null ? i : (i - 1 + shown.length) % shown.length)),
-    [shown.length],
+    () => setViewer((v) => (v ? { ...v, index: (v.index - 1 + v.slides.length) % v.slides.length } : v)),
+    [],
   );
   const next = useCallback(
-    () => setLightbox((i) => (i === null ? i : (i + 1) % shown.length)),
-    [shown.length],
+    () => setViewer((v) => (v ? { ...v, index: (v.index + 1) % v.slides.length } : v)),
+    [],
   );
+
+  const openAlbum = (album: GalleryAlbumDTO) =>
+    setViewer({ slides: album.images.map((g) => ({ src: g.src, caption: g.caption })), index: 0 });
+  const openPhoto = (index: number) =>
+    setViewer({ slides: photoTiles.map((p) => ({ src: p.src, caption: p.caption })), index });
 
   // Keyboard navigation + lock body scroll while the lightbox is open.
   useEffect(() => {
@@ -53,7 +78,7 @@ export function GallerySection({
     };
   }, [open, close, prev, next]);
 
-  // Touch swipe to move sideways between images.
+  // Touch swipe to move sideways between slides.
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -76,30 +101,60 @@ export function GallerySection({
           </div>
         )}
 
-        <div className={`${heading ? "mt-8" : ""} flex flex-wrap justify-center gap-2`}>
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setActive(t.key)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                active === t.key ? "bg-brand-700 text-white shadow-sm" : "border border-brand-200 bg-white text-brand-700 hover:bg-brand-50"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {tabs.length > 1 && (
+          <div className={`${heading ? "mt-8" : ""} flex flex-wrap justify-center gap-2`}>
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActive(t.key)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  active === t.key ? "bg-brand-700 text-white shadow-sm" : "border border-brand-200 bg-white text-brand-700 hover:bg-brand-50"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {shown.length === 0 ? (
+        {!hasContent ? (
           <p className="mt-10 text-center text-sm text-brand-900/50">No images in this category yet.</p>
         ) : (
           <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {shown.map((g, i) => (
-              <figure key={g.id} className="group relative aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-950 shadow-sm">
+            {/* Album tiles — a cover that opens the album's carousel. */}
+            {albumTiles.map((album) => {
+              const date = formatDate(album.publishedAt);
+              return (
+                <figure key={`album-${album.id}`} className="group relative aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-950 shadow-sm">
+                  {/* Stacked-card hint behind the cover */}
+                  <span aria-hidden className="absolute inset-x-2 -top-1 h-2 rounded-t-xl bg-white/30" />
+                  <button
+                    type="button"
+                    onClick={() => openAlbum(album)}
+                    className="block h-full w-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    aria-label={`Open album: ${album.title} (${album.count} photos)`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={album.cover} alt={album.title} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                    <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-brand-950/80 px-2 py-0.5 text-[10px] font-semibold text-white">
+                      <Images className="h-3 w-3" aria-hidden /> {album.count}
+                    </span>
+                  </button>
+                  <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-950/85 to-transparent p-3">
+                    <span className="block text-sm font-semibold text-white">{album.title}</span>
+                    {date && <span className="block text-[11px] text-white/70">{date}</span>}
+                  </figcaption>
+                </figure>
+              );
+            })}
+
+            {/* Loose photo tiles */}
+            {photoTiles.map((g, i) => (
+              <figure key={`photo-${g.id}`} className="group relative aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-950 shadow-sm">
                 <button
                   type="button"
-                  onClick={() => setLightbox(i)}
+                  onClick={() => openPhoto(i)}
                   className="block h-full w-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                   aria-label={`View image: ${g.caption}`}
                 >
@@ -115,7 +170,7 @@ export function GallerySection({
         )}
       </div>
 
-      {open && (
+      {viewer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
           role="dialog"
@@ -123,7 +178,6 @@ export function GallerySection({
           aria-label="Image viewer"
           onClick={close}
         >
-          {/* Close */}
           <button
             type="button"
             onClick={close}
@@ -133,8 +187,7 @@ export function GallerySection({
             <X className="h-6 w-6" />
           </button>
 
-          {/* Prev / Next (hidden when there's only one image) */}
-          {shown.length > 1 && (
+          {viewer.slides.length > 1 && (
             <>
               <button
                 type="button"
@@ -155,7 +208,7 @@ export function GallerySection({
             </>
           )}
 
-          {/* Sliding track — translateX moves sideways to the active image. */}
+          {/* Sliding track — translateX moves sideways to the active slide. */}
           <div
             className="h-full w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
@@ -164,26 +217,25 @@ export function GallerySection({
           >
             <div
               className="flex h-full transition-transform duration-300 ease-out"
-              style={{ transform: `translateX(-${lightbox * 100}%)` }}
+              style={{ transform: `translateX(-${viewer.index * 100}%)` }}
             >
-              {shown.map((g) => (
-                <figure key={g.id} className="flex h-full w-full flex-shrink-0 flex-col items-center justify-center gap-4 px-6 py-12 sm:px-16">
+              {viewer.slides.map((s, i) => (
+                <figure key={i} className="flex h-full w-full flex-shrink-0 flex-col items-center justify-center gap-4 px-6 py-12 sm:px-16">
                   {/* Fixed-size frame so every slide is identical; the image is
                       scaled to fit inside it (object-contain) without cropping. */}
                   <div className="flex h-[70vh] w-full max-w-4xl items-center justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={g.src} alt={g.caption} className="max-h-full max-w-full rounded-lg object-contain" draggable={false} />
+                    <img src={s.src} alt={s.caption} className="max-h-full max-w-full rounded-lg object-contain" draggable={false} />
                   </div>
-                  <figcaption className="max-w-2xl text-center text-sm text-white/90">{g.caption}</figcaption>
+                  <figcaption className="max-w-2xl text-center text-sm text-white/90">{s.caption}</figcaption>
                 </figure>
               ))}
             </div>
           </div>
 
-          {/* Counter */}
-          {shown.length > 1 && (
+          {viewer.slides.length > 1 && (
             <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white">
-              {lightbox + 1} / {shown.length}
+              {viewer.index + 1} / {viewer.slides.length}
             </span>
           )}
         </div>

@@ -6,8 +6,8 @@ import { prisma } from "@/lib/db";
 import { GALLERY_CATEGORIES } from "@/lib/content";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, EmptyState } from "@/components/dashboard/ui";
-import { GalleryUploadForm } from "@/components/dashboard/GalleryUploadForm";
-import { deleteGalleryImage, importLegacyGalleryImages, toggleGalleryImage } from "@/app/actions/gallery";
+import { AlbumCreateForm, GalleryUploadForm } from "@/components/dashboard/GalleryUploadForm";
+import { deleteAlbum, deleteGalleryImage, importLegacyGalleryImages, toggleAlbumDraft, toggleGalleryImage } from "@/app/actions/gallery";
 
 export const metadata: Metadata = { title: "Gallery" };
 
@@ -18,20 +18,80 @@ export default async function GalleryAdminPage() {
   if (!user) redirect("/logout");
   if (user.role !== ROLES.ADMIN && user.role !== ROLES.EXECUTIVE) redirect("/dashboard");
 
-  const images = await prisma.galleryImage.findMany({ orderBy: [{ category: "asc" }, { order: "asc" }] });
+  const [albums, images] = await Promise.all([
+    prisma.album.findMany({
+      orderBy: [{ draft: "asc" }, { publishedAt: "desc" }, { createdAt: "desc" }],
+      include: { images: { orderBy: [{ order: "asc" }, { createdAt: "desc" }] } },
+    }),
+    prisma.galleryImage.findMany({
+      where: { albumId: null },
+      orderBy: [{ category: "asc" }, { order: "asc" }],
+    }),
+  ]);
+
+  const formatDate = (date: Date | null) =>
+    date
+      ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(date)
+      : "Not set";
 
   return (
     <>
       <PageHeader
         title="Gallery"
-        count={images.length}
-        subtitle="Upload photos and assign them to a category. They appear, filtered by category, on the public gallery."
-        action={<GalleryUploadForm />}
+        count={albums.length + images.length}
+        subtitle="Create albums for related photos, control their publication status, or upload individual gallery images."
+        action={<AlbumCreateForm />}
       />
       <div className="space-y-6">
-        <Panel title="Photos">
+        <Panel title="Albums">
+          {albums.length === 0 ? (
+            <EmptyState>No albums yet. Use the Create album button to add the first one.</EmptyState>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {albums.map((album) => (
+                <article key={album.id} className="overflow-hidden rounded-xl border border-brand-100 bg-white">
+                  <div className="relative aspect-[4/3] bg-brand-100">
+                    {album.images[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/api/gallery/${album.images[0].id}`} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="grid h-full place-items-center text-sm text-brand-900/40">No photos</div>
+                    )}
+                    <span className="absolute left-2 top-2 rounded-full bg-brand-900/80 px-2 py-0.5 text-[10px] font-semibold text-white">
+                      {CAT_LABEL[album.category] ?? album.category}
+                    </span>
+                    <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${album.draft ? "bg-amber-600/90" : "bg-emerald-700/90"}`}>
+                      {album.draft ? "Draft" : "Published"}
+                    </span>
+                  </div>
+                  <div className="p-3">
+                    <h2 className="truncate text-sm font-semibold text-brand-950">{album.title}</h2>
+                    <p className="mt-1 text-xs text-brand-900/55">
+                      {album.images.length} {album.images.length === 1 ? "photo" : "photos"} · Published {formatDate(album.publishedAt)}
+                    </p>
+                    <div className="mt-3 flex items-center gap-3 border-t border-brand-100 pt-3">
+                      <form action={toggleAlbumDraft}>
+                        <input type="hidden" name="id" value={album.id} />
+                        <input type="hidden" name="draft" value={(!album.draft).toString()} />
+                        <button className="text-xs font-semibold text-brand-700 hover:text-brand-900">
+                          {album.draft ? "Publish" : "Move to draft"}
+                        </button>
+                      </form>
+                      <form action={deleteAlbum} className="ml-auto">
+                        <input type="hidden" name="id" value={album.id} />
+                        <button className="text-xs font-semibold text-red-600 hover:text-red-800">Delete</button>
+                      </form>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="Individual photos" action={<GalleryUploadForm />}>
           {images.length === 0 ? (
-            <EmptyState>No images yet. Use the Upload image button to add your first photo.</EmptyState>
+            <EmptyState>No individual photos yet. Albums are listed separately above.</EmptyState>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {images.map((g) => (
