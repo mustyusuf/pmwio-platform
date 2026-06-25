@@ -60,6 +60,8 @@ const albumSchema = z.object({
     .refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), "Enter a valid publication date."),
   draft: z.boolean(),
 });
+const MAX_ALBUM_IMAGES = 20;
+const MAX_ALBUM_BYTES = 90 * 1024 * 1024;
 
 /** Creates an album and uploads its photos in one step. */
 export async function createAlbum(_prev: GalleryState, formData: FormData): Promise<GalleryState> {
@@ -82,6 +84,13 @@ export async function createAlbum(_prev: GalleryState, formData: FormData): Prom
 
   const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
   if (files.length === 0) return { error: "Add at least one photo to the album." };
+  if (files.length > MAX_ALBUM_IMAGES) return { error: `An album can contain up to ${MAX_ALBUM_IMAGES} photos.` };
+  const totalBytes = files.reduce((total, file) => total + file.size, 0);
+  if (totalBytes > MAX_ALBUM_BYTES) return { error: "The album is too large. Keep the combined photos below 90MB." };
+  const captions = formData.getAll("captions").map((caption) => String(caption).trim());
+  if (captions.length !== files.length) return { error: "Add a caption for every photo." };
+  const emptyCaption = captions.findIndex((caption) => caption.length < 2);
+  if (emptyCaption !== -1) return { error: `Enter a caption for photo ${emptyCaption + 1}.` };
 
   // Validate and save every file before writing anything to the database.
   const saved: { storedName: string; mimeType: string; size: number }[] = [];
@@ -104,7 +113,7 @@ export async function createAlbum(_prev: GalleryState, formData: FormData): Prom
       images: {
         create: saved.map((s, i) => ({
           category: parsed.data.category,
-          caption: parsed.data.title,
+          caption: captions[i],
           storedName: s.storedName,
           mimeType: s.mimeType,
           size: s.size,

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { GALLERY_CATEGORIES } from "@/lib/content";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, EmptyState } from "@/components/dashboard/ui";
-import { AlbumCreateForm, GalleryUploadForm } from "@/components/dashboard/GalleryUploadForm";
+import { AlbumCreateForm } from "@/components/dashboard/GalleryUploadForm";
 import { deleteAlbum, deleteGalleryImage, importLegacyGalleryImages, toggleAlbumDraft, toggleGalleryImage } from "@/app/actions/gallery";
 
 export const metadata: Metadata = { title: "Gallery" };
@@ -39,7 +39,7 @@ export default async function GalleryAdminPage() {
       <PageHeader
         title="Gallery"
         count={albums.length + images.length}
-        subtitle="Create albums for related photos, control their publication status, or upload individual gallery images."
+        subtitle="Upload related photos together under one album title and category, with a caption for each photo."
         action={<AlbumCreateForm />}
       />
       <div className="space-y-6">
@@ -89,10 +89,8 @@ export default async function GalleryAdminPage() {
           )}
         </Panel>
 
-        <Panel title="Individual photos" action={<GalleryUploadForm />}>
-          {images.length === 0 ? (
-            <EmptyState>No individual photos yet. Albums are listed separately above.</EmptyState>
-          ) : (
+        {images.length > 0 && (
+          <Panel title="Legacy individual photos">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {images.map((g) => (
                 <figure key={g.id} className="overflow-hidden rounded-xl border border-brand-100">
@@ -119,12 +117,12 @@ export default async function GalleryAdminPage() {
                 </figure>
               ))}
             </div>
-          )}
-        </Panel>
+          </Panel>
+        )}
 
         <Panel title="Import website images">
           <p className="text-sm leading-relaxed text-brand-900/65">
-            Add the images extracted from the old website to this managed gallery. This keeps the upload flow available for future photos.
+            Add the images extracted from the old website as individual legacy photos. New gallery uploads should use albums.
           </p>
           <form action={importLegacyGalleryImages} className="mt-4">
             <button className="rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800">
