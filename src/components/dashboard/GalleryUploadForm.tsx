@@ -7,17 +7,26 @@ import { GALLERY_CATEGORIES } from "@/lib/content";
 
 const label = "block text-sm font-medium text-brand-900";
 const input = "mt-1.5 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200";
-type ImagePreview = { name: string; url: string };
+const MAX_ALBUM_IMAGES = 20;
+const MAX_ALBUM_BYTES = 80 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+type ImagePreview = { name: string; url: string; size: number };
+
+function formatMegabytes(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 export function AlbumCreateForm() {
   const [open, setOpen] = useState(false);
   const [previews, setPreviews] = useState<ImagePreview[]>([]);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const previewsRef = useRef<ImagePreview[]>([]);
 
   const clearPreviews = () => {
     for (const preview of previewsRef.current) URL.revokeObjectURL(preview.url);
     previewsRef.current = [];
     setPreviews([]);
+    setSelectionError(null);
   };
 
   useEffect(() => () => {
@@ -118,16 +127,37 @@ export function AlbumCreateForm() {
                   required
                   onChange={(event) => {
                     for (const preview of previewsRef.current) URL.revokeObjectURL(preview.url);
-                    const nextPreviews = Array.from(event.target.files ?? []).map((file) => ({
+                    const files = Array.from(event.target.files ?? []);
+                    const oversizedFile = files.find((file) => file.size > MAX_IMAGE_BYTES);
+                    const totalBytes = files.reduce((total, file) => total + file.size, 0);
+                    let error: string | null = null;
+                    if (files.length > MAX_ALBUM_IMAGES) {
+                      error = `Select no more than ${MAX_ALBUM_IMAGES} photos per album.`;
+                    } else if (oversizedFile) {
+                      error = `${oversizedFile.name} is larger than 10 MB.`;
+                    } else if (totalBytes > MAX_ALBUM_BYTES) {
+                      error = `These photos total ${formatMegabytes(totalBytes)}. Keep one album below 80 MB.`;
+                    }
+                    if (error) {
+                      previewsRef.current = [];
+                      setPreviews([]);
+                      setSelectionError(error);
+                      event.target.value = "";
+                      return;
+                    }
+                    const nextPreviews = files.map((file) => ({
                       name: file.name,
                       url: URL.createObjectURL(file),
+                      size: file.size,
                     }));
                     previewsRef.current = nextPreviews;
                     setPreviews(nextPreviews);
+                    setSelectionError(null);
                   }}
                   className="mt-1.5 block w-full text-sm text-brand-900/70 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700"
                 />
-                <p className="mt-1 text-xs text-brand-900/50">Select up to 20 JPG, PNG, GIF or WEBP files. Maximum 10MB each and 90MB combined.</p>
+                <p className="mt-1 text-xs text-brand-900/50">Select up to 20 JPG, PNG, GIF or WEBP files. Maximum 10MB each and 80MB combined.</p>
+                {selectionError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{selectionError}</p>}
               </div>
 
               {previews.length > 0 && (
@@ -144,7 +174,9 @@ export function AlbumCreateForm() {
                           <img src={preview.url} alt="" className="h-full w-full object-cover" />
                         </div>
                         <div className="p-3">
-                          <p className="truncate text-xs text-brand-900/50" title={preview.name}>{preview.name}</p>
+                          <p className="truncate text-xs text-brand-900/50" title={preview.name}>
+                            {preview.name} · {formatMegabytes(preview.size)}
+                          </p>
                           <label htmlFor={`album-caption-${index}`} className="mt-2 block text-sm font-medium text-brand-900">
                             Caption
                           </label>

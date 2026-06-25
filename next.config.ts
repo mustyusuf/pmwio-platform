@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3", "@prisma/adapter-better-sqlite3"],
   experimental: {
     // Albums can contain several images. Validation in the action keeps each
-    // file at 10MB, the album at 20 files, and the combined payload at 90MB.
+    // file at 10MB, the album at 20 files, and the combined payload at 80MB.
     serverActions: { bodySizeLimit: "100mb" },
   },
 };

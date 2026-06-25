@@ -8,6 +8,11 @@ import type { GalleryAlbumDTO, GalleryPhotoDTO } from "@/lib/gallery";
 const TABS = [{ key: "ALL", label: "All" }, ...GALLERY_CATEGORIES];
 
 type Slide = { src: string; caption: string };
+type Viewer = {
+  slides: Slide[];
+  index: number;
+  album?: { title: string; publishedAt: string | null };
+};
 
 function formatDate(iso: string | null) {
   if (!iso) return null;
@@ -43,7 +48,7 @@ export function GallerySection({
   const hasContent = albumTiles.length > 0 || photoTiles.length > 0;
 
   // Lightbox carousel — a list of slides plus the active index, or null.
-  const [viewer, setViewer] = useState<{ slides: Slide[]; index: number } | null>(null);
+  const [viewer, setViewer] = useState<Viewer | null>(null);
   const open = viewer !== null;
 
   const close = useCallback(() => setViewer(null), []);
@@ -57,7 +62,11 @@ export function GallerySection({
   );
 
   const openAlbum = (album: GalleryAlbumDTO) =>
-    setViewer({ slides: album.images.map((g) => ({ src: g.src, caption: g.caption })), index: 0 });
+    setViewer({
+      slides: album.images.map((g) => ({ src: g.src, caption: g.caption })),
+      index: 0,
+      album: { title: album.title, publishedAt: album.publishedAt },
+    });
   const openPhoto = (index: number) =>
     setViewer({ slides: photoTiles.map((p) => ({ src: p.src, caption: p.caption })), index });
 
@@ -219,17 +228,30 @@ export function GallerySection({
               className="flex h-full transition-transform duration-300 ease-out"
               style={{ transform: `translateX(-${viewer.index * 100}%)` }}
             >
-              {viewer.slides.map((s, i) => (
-                <figure key={i} className="flex h-full w-full flex-shrink-0 flex-col items-center justify-center gap-4 px-6 py-12 sm:px-16">
-                  {/* Fixed-size frame so every slide is identical; the image is
-                      scaled to fit inside it (object-contain) without cropping. */}
-                  <div className="flex h-[70vh] w-full max-w-4xl items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={s.src} alt={s.caption} className="max-h-full max-w-full rounded-lg object-contain" draggable={false} />
+              {viewer.slides.map((s, i) => {
+                const date = viewer.album ? formatDate(viewer.album.publishedAt) : null;
+                return (
+                  <div key={i} className="flex h-full w-full flex-shrink-0 items-center justify-center px-10 py-14 sm:px-20">
+                    <article className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                      {viewer.album && (
+                        <header className="shrink-0 border-b border-black/10 px-4 py-3 sm:px-5">
+                          <h3 className="font-semibold text-brand-950">{viewer.album.title}</h3>
+                          {date && <p className="mt-0.5 text-xs text-brand-900/55">{date}</p>}
+                        </header>
+                      )}
+                      <figure className="min-h-0 overflow-y-auto">
+                        <div className="flex min-h-0 max-h-[68vh] items-center justify-center bg-black">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={s.src} alt={s.caption} className="max-h-[68vh] w-auto max-w-full object-contain" draggable={false} />
+                        </div>
+                        <figcaption className="bg-white px-4 py-4 text-sm leading-relaxed text-brand-950 sm:px-5">
+                          {s.caption}
+                        </figcaption>
+                      </figure>
+                    </article>
                   </div>
-                  <figcaption className="max-w-2xl text-center text-sm text-white/90">{s.caption}</figcaption>
-                </figure>
-              ))}
+                );
+              })}
             </div>
           </div>
 
