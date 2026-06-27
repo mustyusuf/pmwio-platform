@@ -1,4 +1,12 @@
-FROM node:22-bookworm-slim AS builder
+FROM node:22-bookworm-slim AS base
+
+# Prisma needs OpenSSL in both the build and runtime images. ca-certificates is
+# also required for outbound HTTPS calls from the application.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+FROM base AS builder
 
 WORKDIR /app
 
@@ -16,7 +24,7 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM base AS runner
 
 WORKDIR /app
 
