@@ -95,6 +95,11 @@ export function AlbumCreateForm() {
               </div>
 
               <div>
+                <label htmlFor="album-description" className={label}>Description <span className="text-brand-400">(optional)</span></label>
+                <textarea id="album-description" name="description" rows={3} className={input} placeholder="A short story about this album — shown beside the photos in the public gallery." />
+              </div>
+
+              <div>
                 <label htmlFor="album-category" className={label}>Category</label>
                 <select id="album-category" name="category" required defaultValue="" className={input}>
                   <option value="" disabled>Select category…</option>
@@ -178,12 +183,11 @@ export function AlbumCreateForm() {
                             {preview.name} · {formatMegabytes(preview.size)}
                           </p>
                           <label htmlFor={`album-caption-${index}`} className="mt-2 block text-sm font-medium text-brand-900">
-                            Caption
+                            Caption <span className="text-brand-400">(optional)</span>
                           </label>
                           <input
                             id={`album-caption-${index}`}
                             name="captions"
-                            required
                             className={input}
                             placeholder={`Describe photo ${index + 1}`}
                           />

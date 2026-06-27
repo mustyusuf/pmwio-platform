@@ -7,9 +7,21 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
 import { saveUpload } from "@/lib/uploads";
-import { LEGACY_GALLERY_IMAGES } from "@/lib/legacyImages";
 
 export type GalleryState = { ok?: boolean; error?: string } | null;
+
+const CATEGORY = z.enum(["EMPOWERMENT", "ORPHANAGE", "SCHOLARSHIP", "EVENTS"], { message: "Choose a category." });
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_ALBUM_IMAGES = 20;
+const MAX_ALBUM_BYTES = 80 * 1024 * 1024;
+
+function parseDate(value?: string): { ok: true; date: Date | null } | { ok: false } {
+  if (!value) return { ok: true, date: null };
+  if (!DATE_RE.test(value)) return { ok: false };
+  const d = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== value) return { ok: false };
+  return { ok: true, date: d };
+}
 
 async function requireAdmin() {
   const me = await getCurrentUser();
@@ -52,68 +64,63 @@ export async function uploadGalleryImage(_prev: GalleryState, formData: FormData
 
 const albumSchema = z.object({
   title: z.string().trim().min(2, "Enter an album title."),
-  category: z.enum(["EMPOWERMENT", "ORPHANAGE", "SCHOLARSHIP", "EVENTS"], { message: "Choose a category." }),
-  publishedAt: z
-    .string()
-    .trim()
-    .optional()
-    .refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), "Enter a valid publication date."),
+  description: z.string().trim().optional(),
+  category: CATEGORY,
+  publishedAt: z.string().trim().optional(),
   draft: z.boolean(),
 });
-const MAX_ALBUM_IMAGES = 20;
-const MAX_ALBUM_BYTES = 80 * 1024 * 1024;
 
-/** Creates an album and uploads its photos in one step. */
+/** Saves a batch of uploaded image files (validated up-front). */
+async function saveImageBatch(files: File[]): Promise<{ ok: true; saved: { storedName: string; mimeType: string; size: number }[] } | { ok: false; error: string }> {
+  if (files.length === 0) return { ok: false, error: "Add at least one photo to the album." };
+  if (files.length > MAX_ALBUM_IMAGES) return { ok: false, error: `An album can contain up to ${MAX_ALBUM_IMAGES} photos.` };
+  if (files.reduce((t, f) => t + f.size, 0) > MAX_ALBUM_BYTES) return { ok: false, error: "The album is too large. Keep the combined photos below 80MB." };
+  const saved: { storedName: string; mimeType: string; size: number }[] = [];
+  for (const file of files) {
+    const res = await saveUpload(file, { imagesOnly: true });
+    if (!res.ok) return { ok: false, error: res.error };
+    saved.push({ storedName: res.file.storedName, mimeType: res.file.mimeType, size: res.file.size });
+  }
+  return { ok: true, saved };
+}
+
+/** Creates an album and uploads its photos in one step. Captions are optional. */
 export async function createAlbum(_prev: GalleryState, formData: FormData): Promise<GalleryState> {
   const me = await requireAdmin();
   const parsed = albumSchema.safeParse({
     title: formData.get("title"),
+    description: formData.get("description") || undefined,
     category: formData.get("category"),
     publishedAt: formData.get("publishedAt") || undefined,
     draft: formData.get("draft") === "on" || formData.get("draft") === "true",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the form." };
 
-  const parsedDate = parsed.data.publishedAt ? new Date(`${parsed.data.publishedAt}T00:00:00.000Z`) : null;
-  if (
-    parsedDate
-    && (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== parsed.data.publishedAt)
-  ) {
-    return { error: "Enter a valid publication date." };
-  }
+  const dateResult = parseDate(parsed.data.publishedAt);
+  if (!dateResult.ok) return { error: "Enter a valid publication date." };
 
   const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
-  if (files.length === 0) return { error: "Add at least one photo to the album." };
-  if (files.length > MAX_ALBUM_IMAGES) return { error: `An album can contain up to ${MAX_ALBUM_IMAGES} photos.` };
-  const totalBytes = files.reduce((total, file) => total + file.size, 0);
-  if (totalBytes > MAX_ALBUM_BYTES) return { error: "The album is too large. Keep the combined photos below 80MB." };
-  const captions = formData.getAll("captions").map((caption) => String(caption).trim());
-  if (captions.length !== files.length) return { error: "Add a caption for every photo." };
-  const emptyCaption = captions.findIndex((caption) => caption.length < 2);
-  if (emptyCaption !== -1) return { error: `Enter a caption for photo ${emptyCaption + 1}.` };
+  const batch = await saveImageBatch(files);
+  if (!batch.ok) return { error: batch.error };
 
-  // Validate and save every file before writing anything to the database.
-  const saved: { storedName: string; mimeType: string; size: number }[] = [];
-  for (const file of files) {
-    const res = await saveUpload(file, { imagesOnly: true });
-    if (!res.ok) return { error: res.error };
-    saved.push({ storedName: res.file.storedName, mimeType: res.file.mimeType, size: res.file.size });
-  }
+  // Captions are optional and align with the file order; empty ones become null.
+  const captions = formData.getAll("captions").map((c) => String(c).trim());
 
   const maxAlbum = await prisma.album.aggregate({ where: { category: parsed.data.category }, _max: { order: true } });
-  const publishedAt = parsedDate ?? (parsed.data.draft ? null : new Date());
+  const publishedAt = dateResult.date ?? (parsed.data.draft ? null : new Date());
 
   await prisma.album.create({
     data: {
       title: parsed.data.title,
+      description: parsed.data.description || null,
       category: parsed.data.category,
       draft: parsed.data.draft,
       publishedAt,
       order: (maxAlbum._max.order ?? 0) + 1,
       images: {
-        create: saved.map((s, i) => ({
+        create: batch.saved.map((s, i) => ({
           category: parsed.data.category,
-          caption: captions[i],
+          caption: captions[i]?.length ? captions[i] : null,
           storedName: s.storedName,
           mimeType: s.mimeType,
           size: s.size,
@@ -123,11 +130,79 @@ export async function createAlbum(_prev: GalleryState, formData: FormData): Prom
     },
   });
 
-  await prisma.activityLog.create({ data: { userId: me.id, action: "GALLERY_ALBUM_CREATED", detail: `${parsed.data.category}: ${parsed.data.title} (${saved.length} photos)` } });
+  await prisma.activityLog.create({ data: { userId: me.id, action: "GALLERY_ALBUM_CREATED", detail: `${parsed.data.category}: ${parsed.data.title} (${batch.saved.length} photos)` } });
   revalidatePath("/dashboard/gallery");
   revalidatePath("/gallery");
   revalidatePath("/");
   return { ok: true };
+}
+
+/** Edits an existing album's details (title, description, category, date, draft). */
+export async function updateAlbum(_prev: GalleryState, formData: FormData): Promise<GalleryState> {
+  const me = await requireAdmin();
+  const id = String(formData.get("id"));
+  const parsed = albumSchema.safeParse({
+    title: formData.get("title"),
+    description: formData.get("description") || undefined,
+    category: formData.get("category"),
+    publishedAt: formData.get("publishedAt") || undefined,
+    draft: formData.get("draft") === "on" || formData.get("draft") === "true",
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the form." };
+  const dateResult = parseDate(parsed.data.publishedAt);
+  if (!dateResult.ok) return { error: "Enter a valid publication date." };
+
+  const existing = await prisma.album.findUnique({ where: { id }, select: { publishedAt: true } });
+  if (!existing) return { error: "Album not found." };
+  const publishedAt = dateResult.date ?? (parsed.data.draft ? existing.publishedAt : existing.publishedAt ?? new Date());
+
+  await prisma.album.update({
+    where: { id },
+    data: { title: parsed.data.title, description: parsed.data.description || null, category: parsed.data.category, draft: parsed.data.draft, publishedAt },
+  });
+  await prisma.activityLog.create({ data: { userId: me.id, action: "GALLERY_ALBUM_UPDATED", detail: `${parsed.data.category}: ${parsed.data.title}` } });
+  revalidatePath("/dashboard/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** Appends more photos to an existing album. Captions optional. */
+export async function addAlbumImages(_prev: GalleryState, formData: FormData): Promise<GalleryState> {
+  const me = await requireAdmin();
+  const id = String(formData.get("id"));
+  const album = await prisma.album.findUnique({ where: { id }, select: { category: true } });
+  if (!album) return { error: "Album not found." };
+
+  const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
+  const batch = await saveImageBatch(files);
+  if (!batch.ok) return { error: batch.error };
+  const captions = formData.getAll("captions").map((c) => String(c).trim());
+
+  const max = await prisma.galleryImage.aggregate({ where: { albumId: id }, _max: { order: true } });
+  let order = (max._max.order ?? -1) + 1;
+  for (let i = 0; i < batch.saved.length; i++) {
+    const s = batch.saved[i];
+    await prisma.galleryImage.create({
+      data: { albumId: id, category: album.category, caption: captions[i]?.length ? captions[i] : null, storedName: s.storedName, mimeType: s.mimeType, size: s.size, order: order++ },
+    });
+  }
+  await prisma.activityLog.create({ data: { userId: me.id, action: "GALLERY_ALBUM_IMAGES_ADDED", detail: `${batch.saved.length} photos -> ${id}` } });
+  revalidatePath("/dashboard/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/** Updates a single photo's caption (admin editing). */
+export async function updateImageCaption(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id"));
+  const caption = String(formData.get("caption") ?? "").trim();
+  await prisma.galleryImage.update({ where: { id }, data: { caption: caption.length ? caption : null } });
+  revalidatePath("/dashboard/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
 }
 
 export async function deleteAlbum(formData: FormData) {
@@ -183,34 +258,3 @@ export async function toggleGalleryImage(formData: FormData) {
   revalidatePath("/");
 }
 
-export async function importLegacyGalleryImages() {
-  const me = await requireAdmin();
-  let imported = 0;
-
-  for (const item of LEGACY_GALLERY_IMAGES) {
-    const existing = await prisma.galleryImage.findFirst({
-      where: { storedName: item.src },
-      select: { id: true },
-    });
-    if (existing) continue;
-
-    const max = await prisma.galleryImage.aggregate({ where: { category: item.category }, _max: { order: true } });
-    await prisma.galleryImage.create({
-      data: {
-        category: item.category,
-        caption: item.caption,
-        storedName: item.src,
-        mimeType: item.mimeType,
-        order: (max._max.order ?? 0) + 1,
-      },
-    });
-    imported++;
-  }
-
-  await prisma.activityLog.create({
-    data: { userId: me.id, action: "GALLERY_LEGACY_IMPORTED", detail: `${imported} images imported from old website` },
-  });
-  revalidatePath("/dashboard/gallery");
-  revalidatePath("/gallery");
-  revalidatePath("/");
-}

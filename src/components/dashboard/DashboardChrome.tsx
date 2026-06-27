@@ -14,6 +14,7 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  Pencil,
   Settings,
   Sprout,
   User,
@@ -40,6 +41,7 @@ const SIDEBAR_ICONS = {
   list: ListChecks,
   settings: Settings,
   "file-plus": FilePlus2,
+  pencil: Pencil,
   bell: Bell,
 } satisfies Record<NavIcon, typeof House>;
 

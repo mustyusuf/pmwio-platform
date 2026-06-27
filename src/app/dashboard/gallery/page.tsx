@@ -7,7 +7,8 @@ import { GALLERY_CATEGORIES } from "@/lib/content";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, EmptyState } from "@/components/dashboard/ui";
 import { AlbumCreateForm } from "@/components/dashboard/GalleryUploadForm";
-import { deleteAlbum, deleteGalleryImage, importLegacyGalleryImages, toggleAlbumDraft, toggleGalleryImage } from "@/app/actions/gallery";
+import { AlbumEditForm } from "@/components/dashboard/AlbumEditForm";
+import { deleteAlbum, deleteGalleryImage, toggleAlbumDraft, toggleGalleryImage } from "@/app/actions/gallery";
 
 export const metadata: Metadata = { title: "Gallery" };
 
@@ -33,13 +34,14 @@ export default async function GalleryAdminPage() {
     date
       ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(date)
       : "Not set";
+  const dateInput = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : "");
 
   return (
     <>
       <PageHeader
         title="Gallery"
         count={albums.length + images.length}
-        subtitle="Upload related photos together under one album title and category, with a caption for each photo."
+        subtitle="Upload related photos together as an album with a title and description. Captions on individual photos are optional."
         action={<AlbumCreateForm />}
       />
       <div className="space-y-6">
@@ -66,10 +68,22 @@ export default async function GalleryAdminPage() {
                   </div>
                   <div className="p-3">
                     <h2 className="truncate text-sm font-semibold text-brand-950">{album.title}</h2>
+                    {album.description && <p className="mt-1 line-clamp-2 text-xs text-brand-900/55">{album.description}</p>}
                     <p className="mt-1 text-xs text-brand-900/55">
                       {album.images.length} {album.images.length === 1 ? "photo" : "photos"} · Published {formatDate(album.publishedAt)}
                     </p>
-                    <div className="mt-3 flex items-center gap-3 border-t border-brand-100 pt-3">
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-brand-100 pt-3">
+                      <AlbumEditForm
+                        album={{
+                          id: album.id,
+                          title: album.title,
+                          description: album.description ?? "",
+                          category: album.category,
+                          publishedDate: dateInput(album.publishedAt),
+                          draft: album.draft,
+                          images: album.images.map((g) => ({ id: g.id, caption: g.caption ?? "", src: `/api/gallery/${g.id}` })),
+                        }}
+                      />
                       <form action={toggleAlbumDraft}>
                         <input type="hidden" name="id" value={album.id} />
                         <input type="hidden" name="draft" value={(!album.draft).toString()} />
@@ -90,18 +104,18 @@ export default async function GalleryAdminPage() {
         </Panel>
 
         {images.length > 0 && (
-          <Panel title="Legacy individual photos">
+          <Panel title="Individual photos">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {images.map((g) => (
                 <figure key={g.id} className="overflow-hidden rounded-xl border border-brand-100">
                   <div className="relative aspect-[4/3] bg-brand-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/gallery/${g.id}`} alt={g.caption} className={`h-full w-full object-cover ${g.active ? "" : "opacity-40"}`} />
+                    <img src={`/api/gallery/${g.id}`} alt={g.caption ?? ""} className={`h-full w-full object-cover ${g.active ? "" : "opacity-40"}`} />
                     <span className="absolute left-2 top-2 rounded-full bg-brand-900/80 px-2 py-0.5 text-[10px] font-semibold text-white">{CAT_LABEL[g.category] ?? g.category}</span>
                     {!g.active && <span className="absolute right-2 top-2 rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-semibold text-white">hidden</span>}
                   </div>
                   <figcaption className="flex items-center justify-between gap-2 p-2">
-                    <span className="truncate text-xs text-brand-900/70">{g.caption}</span>
+                    <span className="truncate text-xs text-brand-900/70">{g.caption || "—"}</span>
                     <span className="flex shrink-0 gap-2">
                       <form action={toggleGalleryImage}>
                         <input type="hidden" name="id" value={g.id} />
@@ -119,17 +133,6 @@ export default async function GalleryAdminPage() {
             </div>
           </Panel>
         )}
-
-        <Panel title="Import website images">
-          <p className="text-sm leading-relaxed text-brand-900/65">
-            Add the images extracted from the old website as individual legacy photos. New gallery uploads should use albums.
-          </p>
-          <form action={importLegacyGalleryImages} className="mt-4">
-            <button className="rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800">
-              Import website images
-            </button>
-          </form>
-        </Panel>
       </div>
     </>
   );

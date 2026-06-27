@@ -4,6 +4,7 @@ import { MobileNav } from "./MobileNav";
 import { getSession } from "@/lib/session";
 
 const NAV_LINKS = [
+  { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/programs", label: "What We Do" },
   { href: "/gallery", label: "Gallery" },

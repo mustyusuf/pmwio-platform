@@ -15,6 +15,7 @@ export type NavIcon =
   | "list"
   | "settings"
   | "file-plus"
+  | "pencil"
   | "bell";
 export type NavItem = { label: string; href: string; icon: NavIcon; children?: NavChild[]; disabled?: boolean; badge?: string };
 
@@ -93,6 +94,7 @@ export function navForRole(role: string, opts: { empowermentOpen?: boolean } = {
       { label: "Users", href: "/dashboard/users", icon: "user-cog" },
       { label: "Form Builder", href: "/dashboard/form-fields", icon: "file-plus" },
       { label: "Gallery", href: "/dashboard/gallery", icon: "image" },
+      { label: "Site Content", href: "/dashboard/content", icon: "pencil" },
       { label: "Settings", href: "/dashboard/settings", icon: "settings" },
     );
   }

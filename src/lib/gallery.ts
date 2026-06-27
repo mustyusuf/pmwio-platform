@@ -7,6 +7,7 @@ export type GalleryAlbumDTO = {
   id: string;
   category: string;
   title: string;
+  description: string | null;
   publishedAt: string | null; // ISO string, formatted in the UI
   cover: string;
   count: number;
@@ -43,16 +44,17 @@ export async function getGalleryData(): Promise<GalleryData> {
       id: a.id,
       category: a.category,
       title: a.title,
+      description: a.description ?? null,
       publishedAt: a.publishedAt ? a.publishedAt.toISOString() : null,
       cover: `/api/gallery/${a.images[0].id}`,
       count: a.images.length,
-      images: a.images.map((g) => ({ id: g.id, caption: g.caption, src: `/api/gallery/${g.id}` })),
+      images: a.images.map((g) => ({ id: g.id, caption: g.caption ?? "", src: `/api/gallery/${g.id}` })),
     }));
 
   const photos: GalleryPhotoDTO[] = looseImgs.map((g) => ({
     id: g.id,
     category: g.category,
-    caption: g.caption,
+    caption: g.caption ?? "",
     src: `/api/gallery/${g.id}`,
   }));
 

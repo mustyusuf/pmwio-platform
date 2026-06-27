@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { MarketingHero } from "@/components/MarketingHero";
 import { DonationForm } from "@/components/forms/DonationForm";
 import { formatMoney } from "@/lib/format";
+import { loadSiteContent } from "@/lib/content-store";
 
 // Reads donation campaigns from the database, so render at request time rather
 // than statically at build time (the DB does not exist during the Docker build).
@@ -23,6 +24,7 @@ export default async function DonatePage({
   searchParams: Promise<{ error?: string; payment?: string }>;
 }) {
   const { error, payment } = await searchParams;
+  const sc = await loadSiteContent();
   const now = new Date();
   const campaigns = await prisma.donationCampaign.findMany({
     where: {
@@ -40,9 +42,9 @@ export default async function DonatePage({
     <>
       <SiteHeader />
       <MarketingHero
-        eyebrow="Give"
-        title="Your donation creates lasting change."
-        subtitle="Support orphaned children, deserving students and women building sustainable livelihoods."
+        eyebrow={sc.get("donate.hero.eyebrow")}
+        title={sc.get("donate.hero.title")}
+        subtitle={sc.get("donate.hero.subtitle")}
       />
       <main>
         <section className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1.1fr]">
@@ -50,9 +52,9 @@ export default async function DonatePage({
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-100 text-brand-700">
               <HeartHandshake className="h-7 w-7" aria-hidden />
             </div>
-            <h2 className="mt-5 text-3xl font-bold text-brand-950">Make a general donation</h2>
+            <h2 className="mt-5 text-3xl font-bold text-brand-950">{sc.get("donate.general.title")}</h2>
             <p className="mt-4 leading-relaxed text-brand-900/70">
-              Unrestricted donations help PMWIO direct support where it is needed most across all our programmes.
+              {sc.get("donate.general.text")}
             </p>
             <ul className="mt-6 space-y-3 text-sm text-brand-900/70">
               <li>• Secure payment through Paystack</li>
@@ -72,8 +74,8 @@ export default async function DonatePage({
           <section className="bg-brand-50 py-16">
             <div className="mx-auto max-w-6xl px-4 sm:px-6">
               <div className="max-w-2xl">
-                <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">Current appeals</p>
-                <h2 className="mt-2 text-3xl font-bold text-brand-950">Donate to a specific cause</h2>
+                <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">{sc.get("donate.appeals.eyebrow")}</p>
+                <h2 className="mt-2 text-3xl font-bold text-brand-950">{sc.get("donate.appeals.title")}</h2>
               </div>
               <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {campaigns.map((campaign) => {

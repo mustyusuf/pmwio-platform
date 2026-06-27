@@ -296,7 +296,7 @@ model FormField {
 model GalleryImage {
   id         String   @id @default(cuid())
   category   String // EMPOWERMENT | ORPHANAGE | SCHOLARSHIP | EVENTS
-  caption    String
+  caption    String? // optional — admins may publish without per-photo captions
   storedName String // filename on disk in ./uploads
   mimeType   String?
   size       Int?
@@ -314,6 +314,7 @@ model GalleryImage {
 model Album {
   id          String    @id @default(cuid())
   title       String
+  description String? // shown beside the album in the public gallery / lightbox
   category    String // EMPOWERMENT | ORPHANAGE | SCHOLARSHIP | EVENTS
   publishedAt DateTime? // date the album is published / shown to the public
   draft       Boolean   @default(true) // drafts are hidden from the public gallery
@@ -361,4 +362,13 @@ model ActivityLog {
   action    String
   detail    String?
   createdAt DateTime @default(now())
+}
+
+/// Editable public-site content (CMS). Keyed by a stable identifier; `value`
+/// holds text, or (for type "image") the uploaded filename in ./uploads.
+model SiteContent {
+  key       String   @id
+  value     String
+  type      String   @default("text") // text | textarea | image
+  updatedAt DateTime @updatedAt
 }

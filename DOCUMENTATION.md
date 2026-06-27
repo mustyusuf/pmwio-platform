@@ -129,7 +129,7 @@ Statuses, labels and styling are defined in [`src/lib/status.ts`](./src/lib/stat
 - **Home** (`/`) — hero, impact stats, program previews, gallery preview, CTAs.
 - **About** (`/about`) — mission, founder's message, "how we do it", values.
 - **What We Do** (`/programs`) — each program in depth: description, eligibility, how to apply.
-- **Gallery** (`/gallery`) — admin-managed photos, filterable by category.
+- **Gallery** (`/gallery`) — admin-managed **photo albums** in a blog-style grid (feature image + title/description, filterable by category). Clicking an album opens a **lightbox**: an image carousel on one side and the album's title, description and date on the other. Admins bulk-upload images into an album (captions optional) and can **edit published albums** (details, captions, add/remove photos).
 - **Contact** (`/contact`) — org details + a contact form that notifies admins.
 
 ### Membership & accounts

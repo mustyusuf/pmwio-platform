@@ -1,14 +1,19 @@
 import Link from "next/link";
-import { ORG } from "@/lib/content";
+import { loadSiteContent } from "@/lib/content-store";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const sc = await loadSiteContent();
+  const name = sc.get("org.name");
+  const email = sc.get("org.email");
+  const phone = sc.get("org.phone");
+
   return (
     <footer id="contact" className="mt-auto bg-brand-950 text-brand-100">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-4">
         <div className="md:col-span-2">
-          <h3 className="text-lg font-bold text-white">{ORG.name}</h3>
+          <h3 className="text-lg font-bold text-white">{name}</h3>
           <p className="mt-3 max-w-md text-sm leading-relaxed text-brand-200">
-            {ORG.blurb}
+            {sc.get("org.blurb")}
           </p>
         </div>
 
@@ -34,22 +39,23 @@ export function SiteFooter() {
           </h4>
           <ul className="mt-4 space-y-2 text-sm">
             <li>
-              <a href={`mailto:${ORG.email}`} className="hover:text-white">
-                {ORG.email}
+              <a href={`mailto:${email}`} className="hover:text-white">
+                {email}
               </a>
             </li>
             <li>
-              <a href={`tel:${ORG.phone.replace(/\s+/g, "")}`} className="hover:text-white">
-                {ORG.phone}
+              <a href={`tel:${phone.replace(/\s+/g, "")}`} className="hover:text-white">
+                {phone}
               </a>
             </li>
+            <li className="text-brand-200">{sc.get("org.address")}</li>
           </ul>
         </div>
       </div>
 
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-4 py-5 text-xs text-brand-300 sm:px-6">
-          © {new Date().getFullYear()} {ORG.name}. All rights reserved.
+          © {new Date().getFullYear()} {name}. All rights reserved.
         </div>
       </div>
     </footer>
