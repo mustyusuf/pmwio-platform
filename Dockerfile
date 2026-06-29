@@ -37,6 +37,10 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
+# `next start` re-reads next.config.ts at runtime (non-standalone build). Without
+# it the server falls back to defaults — notably the 1MB Server Action body limit,
+# which breaks multi-photo album uploads.
+COPY --from=builder /app/next.config.ts ./next.config.ts
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
