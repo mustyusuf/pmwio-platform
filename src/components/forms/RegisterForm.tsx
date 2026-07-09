@@ -20,10 +20,13 @@ export function RegisterForm() {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
         <CircleCheckBig className="mx-auto h-9 w-9 text-emerald-700" aria-hidden />
-        <h3 className="mt-2 text-lg font-bold text-emerald-900">Registration received</h3>
+        <h3 className="mt-2 text-lg font-bold text-emerald-900">Check your email</h3>
         <p className="mt-2 text-sm text-emerald-800">
-          Your membership is <strong>awaiting administrator approval</strong>. We&apos;ll verify your
-          details and activate your account — you can log in once it&apos;s approved.
+          We&apos;ve sent a <strong>confirmation link</strong> to your email address. Please confirm it to
+          continue. After that, an administrator will review your membership and activate your account.
+        </p>
+        <p className="mt-3 text-xs text-emerald-800/80">
+          Didn&apos;t get it? <a href="/verify-email" className="font-semibold underline">Resend the confirmation link</a>.
         </p>
       </div>
     );

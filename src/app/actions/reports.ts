@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
 import { saveUpload } from "@/lib/uploads";
+import { send, recipientsByRole } from "@/lib/email";
+import { termReportAlert } from "@/lib/email-templates";
 
 export type ReportState = { ok?: boolean; error?: string } | null;
 
@@ -74,6 +76,10 @@ export async function submitTermReport(_prev: ReportState, formData: FormData): 
     });
   }
   await prisma.activityLog.create({ data: { userId: me.id, action: "TERM_REPORT_SUBMITTED", detail: `${app.reference} · ${d.term} ${d.session}` } });
+
+  // Email #25 (board & executives): a new term report was filed.
+  const boardExec = await recipientsByRole([ROLES.BOARD, ROLES.EXECUTIVE]);
+  if (boardExec.length > 0) await send(boardExec, termReportAlert(me.name, app.fullName, d.term, d.session));
 
   revalidatePath(`/dashboard/applications/${d.applicationId}`);
   revalidatePath("/dashboard/scholarships");

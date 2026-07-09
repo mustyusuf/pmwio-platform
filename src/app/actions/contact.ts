@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
+import { send, recipientsByRole } from "@/lib/email";
+import { contactAlert, contactReceived } from "@/lib/email-templates";
 
 export type ContactState = { ok?: boolean; error?: string } | null;
 
@@ -37,5 +39,11 @@ export async function submitContact(_prev: ContactState, formData: FormData): Pr
       data: admins.map((a) => ({ userId: a.id, title: "New contact message", body: `${d.name} (${d.email})${d.subject ? ` — ${d.subject}` : ""}` })),
     });
   }
+
+  // Email #31 (admins & executives) and #32 (auto-acknowledgement to the sender).
+  const staff = await recipientsByRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+  if (staff.length > 0) await send(staff, contactAlert(d), d.email);
+  await send(d.email, contactReceived(d.name));
+
   return { ok: true };
 }

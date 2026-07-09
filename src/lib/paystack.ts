@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/db";
+import { send, recipientsByRole } from "@/lib/email";
+import { donationReceipt, donationAlert } from "@/lib/email-templates";
+import { ROLES } from "@/lib/roles";
 
 const API_URL = "https://api.paystack.co";
 
@@ -96,6 +99,25 @@ function planCodeOf(plan: PaystackTransaction["plan"]) {
 }
 
 /** Idempotently reconciles a successful Paystack charge into the local ledger. */
+/**
+ * Emails a donor their receipt (#28/#30) and alerts admins/executives (#29).
+ * Best-effort: send() never throws.
+ */
+async function sendDonationEmails(d: {
+  donorName: string | null;
+  donorEmail: string | null;
+  amount: number;
+  reference: string;
+  recurring: boolean;
+}) {
+  const name = d.donorName ?? "Supporter";
+  if (d.donorEmail) {
+    await send(d.donorEmail, donationReceipt({ name, amount: d.amount, reference: d.reference, recurring: d.recurring }));
+  }
+  const staff = await recipientsByRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+  if (staff.length > 0) await send(staff, donationAlert(name, d.amount, d.reference));
+}
+
 export async function recordSuccessfulCharge(data: PaystackTransaction) {
   if (data.status !== "success") return false;
 
@@ -104,6 +126,8 @@ export async function recordSuccessfulCharge(data: PaystackTransaction) {
     if (data.amount !== Math.round(existing.amount * 100) || data.currency !== existing.currency) {
       return false;
     }
+    // Only email on the first transition to SUCCESS (webhooks can arrive twice).
+    const wasSuccess = existing.status === "SUCCESS";
     await prisma.$transaction([
       prisma.donation.update({
         where: { id: existing.id },
@@ -127,6 +151,15 @@ export async function recordSuccessfulCharge(data: PaystackTransaction) {
           ]
         : []),
     ]);
+    if (!wasSuccess) {
+      await sendDonationEmails({
+        donorName: existing.donorName,
+        donorEmail: existing.donorEmail,
+        amount: existing.amount,
+        reference: existing.reference,
+        recurring: existing.type === "MEMBER_CONTRIBUTION",
+      });
+    }
     return true;
   }
 
@@ -175,6 +208,13 @@ export async function recordSuccessfulCharge(data: PaystackTransaction) {
       },
     }),
   ]);
+  await sendDonationEmails({
+    donorName: subscription.member.name,
+    donorEmail: subscription.member.email,
+    amount: data.amount / 100,
+    reference: data.reference,
+    recurring: true,
+  });
   return true;
 }
 

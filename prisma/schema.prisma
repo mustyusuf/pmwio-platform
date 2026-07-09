@@ -24,12 +24,14 @@ model User {
   role         String   @default("MEMBER") // EXECUTIVE | BOARD | ADMIN | FINANCE | COORDINATOR | MEMBER | BENEFICIARY
   active       Boolean  @default(true)
   approved     Boolean  @default(true) // self-registered members start false until an admin approves
+  emailVerified Boolean @default(true) // self-registered members start false until they confirm via email link
   states       String? // JSON array of states a State Coordinator represents
   imagePath    String? // uploaded profile image (stored filename)
   createdAt    DateTime @default(now())
 
-  passwordResets PasswordReset[]
-  termReports    TermReport[]    @relation("CoordinatorReports")
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerification[]
+  termReports        TermReport[]        @relation("CoordinatorReports")
 
   // Applications this user submitted as a beneficiary.
   applications             Application[]             @relation("Beneficiary")
@@ -148,6 +150,17 @@ model PasswordReset {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   tokenHash String // sha-256 of the reset token
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// A single-use, time-limited email verification token issued at registration.
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String // sha-256 of the verification token
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())

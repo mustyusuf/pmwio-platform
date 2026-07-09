@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { isStaff, ROLES } from "@/lib/roles";
 import { generateReference } from "@/lib/auth";
+import { send } from "@/lib/email";
+import { scholarshipRenewalSubmitted, scholarshipRenewalToConfirm } from "@/lib/email-templates";
 
 /** Staff sets/updates a scholarship's award period. */
 export async function setScholarshipPeriod(formData: FormData) {
@@ -68,13 +70,20 @@ export async function renewScholarship(formData: FormData) {
     },
   });
 
+  let coordinator: { email: string; name: string } | null = null;
   if (app.referredById) {
     await prisma.notification.create({ data: { userId: app.referredById, title: "Scholarship renewal to confirm", body: `${app.fullName} is renewing scholarship ${app.reference}. Please confirm.` } });
+    coordinator = await prisma.user.findUnique({ where: { id: app.referredById }, select: { email: true, name: true } });
   }
   if (app.beneficiaryId) {
     await prisma.notification.create({ data: { userId: app.beneficiaryId, title: "Renewal submitted", body: `Your scholarship renewal (ref ${reference}) is awaiting referee confirmation.` } });
   }
   await prisma.activityLog.create({ data: { userId: me.id, action: "SCHOLARSHIP_RENEWED", detail: `${app.reference} → ${reference}` } });
+
+  // Email #24 (beneficiary, and the nominating coordinator).
+  if (app.email) await send(app.email, scholarshipRenewalSubmitted(app.fullName, reference));
+  if (coordinator?.email) await send(coordinator.email, scholarshipRenewalToConfirm(coordinator.name, app.fullName, reference));
+
   revalidatePath("/dashboard");
   redirect(`/dashboard/applications/${renewal.id}`);
 }

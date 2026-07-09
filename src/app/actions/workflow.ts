@@ -10,6 +10,8 @@ import { uniqueUserId } from "@/app/actions/auth";
 import { ROLES } from "@/lib/roles";
 import { SCHOLARSHIP_MAX_AWARD } from "@/lib/content";
 import { getSettings, eligibleCount, clampQuorum, tally } from "@/lib/settings";
+import { send, recipientsByRole } from "@/lib/email";
+import * as tpl from "@/lib/email-templates";
 
 async function requireRole(roles: string[]) {
   const user = await getCurrentUser();
@@ -35,6 +37,12 @@ export async function confirmReferral(formData: FormData) {
   await prisma.review.create({ data: { applicationId: id, reviewerId: me.id, reviewerRole: "REFEREE", recommendation: "CONFIRM", comment: comment || null } });
   await notify(app!.beneficiaryId, "Referral confirmed", `${me.name} confirmed your application (ref ${app!.reference}). It is now with the Board for review.`);
   await prisma.activityLog.create({ data: { userId: me.id, action: "REFERRAL_CONFIRMED", detail: app!.reference } });
+
+  // Email #12 (beneficiary) and #13 (board members).
+  await send(app!.email, tpl.referralConfirmed(app!.fullName, app!.reference));
+  const board = await recipientsByRole([ROLES.BOARD]);
+  if (board.length > 0) await send(board, tpl.boardNewApplication(app!.fullName, app!.category, app!.reference));
+
   revalidatePath("/dashboard");
 }
 
@@ -49,6 +57,10 @@ export async function rejectReferral(formData: FormData) {
   await prisma.review.create({ data: { applicationId: id, reviewerId: me.id, reviewerRole: "REFEREE", recommendation: "REJECT", comment: comment || null } });
   await notify(app!.beneficiaryId, "Referral not confirmed", `Your application (ref ${app!.reference}) was not confirmed by the referee.`);
   await prisma.activityLog.create({ data: { userId: me.id, action: "REFERRAL_REJECTED", detail: app!.reference } });
+
+  // Email #14 (beneficiary).
+  await send(app!.email, tpl.referralRejected(app!.fullName, app!.reference));
+
   revalidatePath("/dashboard");
 }
 
@@ -86,17 +98,29 @@ async function castApplicationVote(opts: {
     if (approve >= quorum) {
       await prisma.application.update({ where: { id }, data: { status: "PENDING_EXECUTIVE", boardRecommendation: "APPROVE" } });
       await notify(app!.beneficiaryId, "Passed board review", `Your application (ref ${app!.reference}) was recommended by the Board and is with the Executive.`);
+      // Email #15a (beneficiary) and #15b (executives).
+      await send(app!.email, tpl.applicationPassedBoard(app!.fullName, app!.reference));
+      const execs = await recipientsByRole([ROLES.EXECUTIVE]);
+      if (execs.length > 0) await send(execs, tpl.executiveDecisionReady(app!.fullName, app!.reference));
     } else if (reject >= quorum) {
       await prisma.application.update({ where: { id }, data: { status: "REJECTED", boardRecommendation: "REJECT" } });
       await notify(app!.beneficiaryId, "Application decision", `Your application (ref ${app!.reference}) was not approved at board review.`);
+      // Email #16 (beneficiary).
+      await send(app!.email, tpl.applicationRejected(app!.fullName, app!.reference, "board review"));
     }
   } else {
     if (approve >= quorum) {
       await prisma.application.update({ where: { id }, data: { status: "APPROVED" } });
       await notify(app!.beneficiaryId, "Application approved 🎉", `Your application (ref ${app!.reference}) has been approved. Finance will arrange a disbursement.`);
+      // Email #17a (beneficiary) and #17b (finance).
+      await send(app!.email, tpl.applicationApproved(app!.fullName, app!.reference));
+      const finance = await recipientsByRole([ROLES.FINANCE]);
+      if (finance.length > 0) await send(finance, tpl.financePaymentEntryReady(app!.fullName, app!.reference));
     } else if (reject >= quorum) {
       await prisma.application.update({ where: { id }, data: { status: "REJECTED" } });
       await notify(app!.beneficiaryId, "Application decision", `Your application (ref ${app!.reference}) was not approved.`);
+      // Email #18 (beneficiary).
+      await send(app!.email, tpl.applicationRejected(app!.fullName, app!.reference, "final review"));
     }
   }
   await prisma.activityLog.create({ data: { userId: me.id, action: `${stage}_VOTE`, detail: `${app!.reference} · ${decision} (${approve}/${quorum})` } });
@@ -168,6 +192,11 @@ export async function createPayment(_prev: PaymentEntryState, formData: FormData
     },
   });
   await prisma.activityLog.create({ data: { userId: me.id, action: "PAYMENT_ENTERED", detail: `${app.reference} · ₦${parsed.data.amount}` } });
+
+  // Email #19 (board members): a payment awaits their approval.
+  const board = await recipientsByRole([ROLES.BOARD]);
+  if (board.length > 0) await send(board, tpl.paymentAwaitingBoard(app.reference, parsed.data.amount));
+
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -197,17 +226,36 @@ export async function castPaymentVote(formData: FormData) {
   const eligible = await eligibleCount(level === "BOARD" ? ROLES.BOARD : ROLES.EXECUTIVE);
   const quorum = clampQuorum(level === "BOARD" ? settings.boardQuorum : settings.executiveQuorum, eligible);
 
+  const paymentRef = payment.application?.reference ?? payment.reference ?? id;
   if (level === "BOARD") {
-    if (approve >= quorum) await prisma.payment.update({ where: { id }, data: { status: "PENDING_EXECUTIVE" } });
-    else if (reject >= quorum) await prisma.payment.update({ where: { id }, data: { status: "REJECTED" } });
+    if (approve >= quorum) {
+      await prisma.payment.update({ where: { id }, data: { status: "PENDING_EXECUTIVE" } });
+      // Email #20 (executives): payment awaits final approval.
+      const execs = await recipientsByRole([ROLES.EXECUTIVE]);
+      if (execs.length > 0) await send(execs, tpl.paymentAwaitingExecutive(paymentRef, payment.amount));
+    } else if (reject >= quorum) {
+      await prisma.payment.update({ where: { id }, data: { status: "REJECTED" } });
+      // Email #23 (finance): payment rejected at board level.
+      const finance = await recipientsByRole([ROLES.FINANCE]);
+      if (finance.length > 0) await send(finance, tpl.paymentRejected(paymentRef, payment.amount, ROLES.BOARD));
+    }
   } else {
     if (approve >= quorum) {
       await prisma.payment.update({ where: { id }, data: { status: "COMPLETED", paidAt: new Date(), approvedById: me.id, method: payment.method ?? "Bank transfer" } });
       if (payment.application?.beneficiaryId) {
         await notify(payment.application.beneficiaryId, "Payment disbursed 🎉", `A payment of ₦${payment.amount.toLocaleString()} has been disbursed (ref ${payment.application.reference}).`);
       }
+      // Email #21 (finance: cleared for disbursement) and #22 (beneficiary: disbursed).
+      const finance = await recipientsByRole([ROLES.FINANCE]);
+      if (finance.length > 0) await send(finance, tpl.paymentClearedForFinance(paymentRef, payment.amount));
+      if (payment.application?.email) {
+        await send(payment.application.email, tpl.paymentDisbursed(payment.application.fullName, payment.amount, paymentRef));
+      }
     } else if (reject >= quorum) {
       await prisma.payment.update({ where: { id }, data: { status: "REJECTED" } });
+      // Email #23 (finance): payment rejected at executive level.
+      const finance = await recipientsByRole([ROLES.FINANCE]);
+      if (finance.length > 0) await send(finance, tpl.paymentRejected(paymentRef, payment.amount, ROLES.EXECUTIVE));
     }
   }
   await prisma.activityLog.create({ data: { userId: me.id, action: `PAYMENT_${level}_VOTE`, detail: `₦${payment.amount} · ${decision} (${approve}/${quorum})` } });
@@ -263,6 +311,10 @@ export async function createStaffUser(_prev: AdminState, formData: FormData): Pr
     },
   });
   await prisma.activityLog.create({ data: { userId: me.id, action: "USER_CREATED", detail: `${created.role} · ${created.email}` } });
+
+  // Email #6 (new staff user): role, User ID and temporary password.
+  await send(created.email, tpl.staffAccountCreated(created.name, created.userId, created.role, parsed.data.password));
+
   revalidatePath("/dashboard");
   return { ok: true, created: created.userId };
 }
@@ -284,6 +336,10 @@ export async function approveMember(formData: FormData) {
   const user = await prisma.user.update({ where: { id }, data: { approved: true, active: true } });
   await prisma.notification.create({ data: { userId: id, title: "Account approved 🎉", body: "Your membership has been approved. You can now log in." } });
   await prisma.activityLog.create({ data: { userId: me.id, action: "MEMBER_APPROVED", detail: `${user.name} (${user.userId})` } });
+
+  // Email #4 (member): account activated, with User ID and login link.
+  await send(user.email, tpl.memberApproved(user.name, user.userId));
+
   revalidatePath("/dashboard/users");
 }
 
@@ -293,6 +349,8 @@ export async function rejectMember(formData: FormData) {
   const id = String(formData.get("userId"));
   const user = await prisma.user.findUnique({ where: { id } });
   if (user && !user.approved) {
+    // Email #5 (applicant) before removing the account.
+    await send(user.email, tpl.memberDeclined(user.name));
     await prisma.user.delete({ where: { id } });
     await prisma.activityLog.create({ data: { userId: me.id, action: "MEMBER_DECLINED", detail: `${user.name} (${user.email})` } });
   }

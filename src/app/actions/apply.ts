@@ -7,6 +7,8 @@ import { hashPassword, generateReference } from "@/lib/auth";
 import { uniqueUserId } from "@/app/actions/auth";
 import { ROLES, parseStates } from "@/lib/roles";
 import { saveUpload } from "@/lib/uploads";
+import { send } from "@/lib/email";
+import { applicationSubmitted, refereeReferral } from "@/lib/email-templates";
 
 export type ApplyState =
   | { ok: true; reference: string; userId?: string; createdAccount: boolean }
@@ -215,6 +217,10 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     });
   }
   await prisma.activityLog.create({ data: { userId: beneficiaryId, action: "APPLICATION_SUBMITTED", detail: `${d.category} · ref ${reference}` } });
+
+  // Email #9 (applicant) and #10 (referee / coordinator named on it).
+  await send(d.email, applicationSubmitted(fullName, d.category, reference));
+  if (referee.email) await send(referee.email, refereeReferral(referee.name, fullName, d.category));
 
   return { ok: true, reference, userId: newUserId, createdAccount };
 }

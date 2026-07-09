@@ -1,13 +1,31 @@
 "use server";
 
+import crypto from "node:crypto";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword, generateUserId } from "@/lib/auth";
 import { createSession, destroySession } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
+import { send, link, recipientsByRole } from "@/lib/email";
+import { memberRegistrationPending, memberRegistrationAlert, verifyEmail } from "@/lib/email-templates";
 
 export type AuthState = { error?: string; pending?: boolean } | null;
+
+/**
+ * Issues a fresh single-use email-verification token for a user and emails them
+ * the confirmation link (#3). Any earlier unused tokens are invalidated so only
+ * the latest link works. Best-effort: never throws.
+ */
+async function issueEmailVerification(user: { id: string; name: string; email: string }) {
+  await prisma.emailVerification.updateMany({ where: { userId: user.id, used: false }, data: { used: true } });
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  await prisma.emailVerification.create({
+    data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24) }, // 24h
+  });
+  await send(user.email, verifyEmail(user.name, link(`/verify-email?token=${token}`)));
+}
 
 /** Find an unused public User ID, retrying on the rare chance of a collision. */
 export async function uniqueUserId(): Promise<string> {
@@ -58,7 +76,7 @@ export async function registerAction(
   }
 
   // Public registration creates a Member / Referee account that stays inactive
-  // until an administrator approves it (to verify they are a genuine member).
+  // until the applicant confirms their email AND an administrator approves it.
   const user = await prisma.user.create({
     data: {
       name,
@@ -69,25 +87,19 @@ export async function registerAction(
       role: ROLES.MEMBER,
       userId: await uniqueUserId(),
       approved: false,
+      emailVerified: false,
     },
   });
 
   await prisma.activityLog.create({
-    data: { userId: user.id, action: "MEMBER_REGISTERED", detail: `${name} — awaiting approval` },
+    data: { userId: user.id, action: "MEMBER_REGISTERED", detail: `${name} — awaiting email verification` },
   });
 
-  // Notify administrators of the pending member.
-  const admins = await prisma.user.findMany({
-    where: { active: true, role: { in: [ROLES.ADMIN, ROLES.EXECUTIVE] } },
-    select: { id: true },
-  });
-  if (admins.length > 0) {
-    await prisma.notification.createMany({
-      data: admins.map((a) => ({ userId: a.id, title: "New member awaiting approval", body: `${name} registered and needs approval.` })),
-    });
-  }
+  // Email #3: confirm email ownership. Admins are only alerted once the email is
+  // verified (see verifyEmailToken), so they never review unverified accounts.
+  await issueEmailVerification(user);
 
-  // Do NOT log them in — they must be approved first.
+  // Do NOT log them in — they must verify their email and then be approved.
   return { pending: true };
 }
 
@@ -118,6 +130,9 @@ export async function loginAction(
   if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
     return { error: "Incorrect User ID / email or password." };
   }
+  if (!user.emailVerified) {
+    return { error: "Please confirm your email address first. Check your inbox for the confirmation link, or request a new one at /verify-email." };
+  }
   if (!user.approved) {
     return { error: "Your account is awaiting administrator approval. Please check back soon." };
   }
@@ -132,4 +147,74 @@ export async function loginAction(
 export async function logoutAction(): Promise<void> {
   await destroySession();
   redirect("/");
+}
+
+// ---------------------------------------------------------------------------
+// Email verification (#3): confirm ownership before an admin reviews the member.
+// ---------------------------------------------------------------------------
+
+export type VerifyEmailResult =
+  | { ok: true; alreadyVerified?: boolean }
+  | { ok: false; error: string };
+
+/** Confirm a verification token: marks the email verified and alerts admins. */
+export async function verifyEmailToken(rawToken: string): Promise<VerifyEmailResult> {
+  const token = rawToken?.trim();
+  if (!token) return { ok: false, error: "This confirmation link is missing its token." };
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const record = await prisma.emailVerification.findFirst({
+    where: { tokenHash, used: false, expiresAt: { gt: new Date() } },
+    include: { user: true },
+  });
+  if (!record) {
+    return { ok: false, error: "This confirmation link is invalid or has expired. Please request a new one." };
+  }
+
+  await prisma.emailVerification.update({ where: { id: record.id }, data: { used: true } });
+
+  if (record.user.emailVerified) {
+    return { ok: true, alreadyVerified: true };
+  }
+
+  await prisma.user.update({ where: { id: record.userId }, data: { emailVerified: true } });
+  await prisma.activityLog.create({ data: { userId: record.userId, action: "EMAIL_VERIFIED", detail: record.user.email } });
+
+  // Now that ownership is proven, queue the member for admin approval.
+  const admins = await prisma.user.findMany({
+    where: { active: true, role: { in: [ROLES.ADMIN, ROLES.EXECUTIVE] } },
+    select: { id: true },
+  });
+  if (admins.length > 0) {
+    await prisma.notification.createMany({
+      data: admins.map((a) => ({ userId: a.id, title: "New member awaiting approval", body: `${record.user.name} confirmed their email and needs approval.` })),
+    });
+  }
+
+  // Email #1 (member: registration confirmed, pending approval) and #2 (staff alert).
+  await send(record.user.email, memberRegistrationPending(record.user.name));
+  const staff = await recipientsByRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+  if (staff.length > 0) await send(staff, memberRegistrationAlert(record.user.name, record.user.email));
+
+  return { ok: true };
+}
+
+export type ResendVerificationState = { ok?: boolean; error?: string } | null;
+
+/** Re-send the verification link. Responds identically whether or not a matching
+ *  unverified account exists, to avoid leaking which emails are registered. */
+export async function resendVerification(_prev: ResendVerificationState, formData: FormData): Promise<ResendVerificationState> {
+  const identifier = String(formData.get("identifier") ?? "").trim();
+  if (!identifier) return { error: "Enter your User ID or email." };
+
+  const user = await prisma.user.findFirst({
+    where: {
+      emailVerified: false,
+      OR: [{ email: identifier.toLowerCase() }, { userId: identifier.toUpperCase() }],
+    },
+    select: { id: true, name: true, email: true },
+  });
+  if (user) await issueEmailVerification(user);
+
+  return { ok: true };
 }

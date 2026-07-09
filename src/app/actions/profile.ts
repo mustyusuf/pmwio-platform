@@ -8,6 +8,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { saveUpload } from "@/lib/uploads";
+import { send, link, isEmailConfigured } from "@/lib/email";
+import { passwordReset, passwordChanged } from "@/lib/email-templates";
 
 export type ProfileState = { ok?: boolean; error?: string; message?: string } | null;
 
@@ -70,6 +72,9 @@ export async function changePassword(_prev: ProfileState, formData: FormData): P
   }
   await prisma.user.update({ where: { id: me.id }, data: { passwordHash: await hashPassword(parsed.data.next) } });
   await prisma.activityLog.create({ data: { userId: me.id, action: "PASSWORD_CHANGED", detail: me.email } });
+
+  // Email #8 (security confirmation).
+  await send(fresh.email, passwordChanged(fresh.name));
   return { ok: true, message: "Password changed." };
 }
 
@@ -95,8 +100,11 @@ export async function requestPasswordReset(_prev: ResetRequestState, formData: F
     data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 1000 * 60 * 30) }, // 30 min
   });
 
-  // In production this link would be emailed. For this app we surface it directly.
-  return { ok: true, resetUrl: `/reset-password?token=${token}` };
+  // Email #7 (password reset link). If email isn't configured, fall back to
+  // surfacing the link on-screen so the flow still works in development.
+  const resetUrl = link(`/reset-password?token=${token}`);
+  await send(user.email, passwordReset(user.name, resetUrl));
+  return isEmailConfigured() ? { ok: true } : { ok: true, resetUrl };
 }
 
 const resetSchema = z
@@ -123,8 +131,11 @@ export async function resetPassword(_prev: ResetState, formData: FormData): Prom
   });
   if (!record) return { error: "This reset link is invalid or has expired. Please request a new one." };
 
-  await prisma.user.update({ where: { id: record.userId }, data: { passwordHash: await hashPassword(parsed.data.next) } });
+  const updated = await prisma.user.update({ where: { id: record.userId }, data: { passwordHash: await hashPassword(parsed.data.next) } });
   await prisma.passwordReset.update({ where: { id: record.id }, data: { used: true } });
   await prisma.activityLog.create({ data: { userId: record.userId, action: "PASSWORD_RESET", detail: "via reset link" } });
+
+  // Email #8 (security confirmation).
+  await send(updated.email, passwordChanged(updated.name));
   return { ok: true };
 }

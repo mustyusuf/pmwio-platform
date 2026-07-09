@@ -9,6 +9,8 @@ import { generateReference } from "@/lib/auth";
 import { ROLES } from "@/lib/roles";
 import { sanitizeRichText, htmlToText } from "@/lib/sanitize";
 import { saveUpload } from "@/lib/uploads";
+import { send } from "@/lib/email";
+import { empowermentSubmitted, refereeReferral } from "@/lib/email-templates";
 
 export type EmpowermentState = { ok?: boolean; error?: string; reference?: string } | null;
 
@@ -50,12 +52,14 @@ export async function submitEmpowerment(_prev: EmpowermentState, formData: FormD
   // Optional member referee.
   let referredById: string | undefined;
   let referredByCode = me.userId;
+  let refereeContact: { email: string; name: string } | undefined;
   if (d.refereeId) {
     const ref = await prisma.user.findFirst({ where: { userId: d.refereeId.toUpperCase(), role: ROLES.MEMBER } });
     if (!ref) return { error: "The referee ID you entered is not a valid member." };
     if (ref.id === me.id) return { error: "You can't list yourself as your own referee." };
     referredById = ref.id;
     referredByCode = ref.userId;
+    refereeContact = { email: ref.email, name: ref.name };
   }
 
   // Optional supporting document — validate before creating anything.
@@ -120,6 +124,10 @@ export async function submitEmpowerment(_prev: EmpowermentState, formData: FormD
   }
   await prisma.notification.create({ data: { userId: me.id, title: "Empowerment application submitted", body: `Your empowerment application (ref ${reference}) is now with the Board for review.` } });
   await prisma.activityLog.create({ data: { userId: me.id, action: "EMPOWERMENT_APPLIED", detail: `ref ${reference} · ₦${d.desiredAmount}` } });
+
+  // Email #11 (applicant, and the optional named referee).
+  await send(me.email, empowermentSubmitted(me.name, reference));
+  if (refereeContact) await send(refereeContact.email, refereeReferral(refereeContact.name, me.name, "EMPOWERMENT"));
 
   revalidatePath("/dashboard");
   return { ok: true, reference };

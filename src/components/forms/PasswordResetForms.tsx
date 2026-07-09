@@ -15,7 +15,7 @@ export function ForgotPasswordForm() {
     return (
       <div className="space-y-4">
         <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          If an account matches what you entered, a password reset link has been generated.
+          If an account matches what you entered, a password reset link has been sent to its email address.
         </p>
         {state.resetUrl && (
           <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm">

@@ -16,9 +16,11 @@ export default async function UsersPage() {
   if (!user) redirect("/logout");
   if (user.role !== ROLES.ADMIN && user.role !== ROLES.EXECUTIVE) redirect("/dashboard");
 
-  const [users, pending] = await Promise.all([
+  const [users, pending, unverifiedCount] = await Promise.all([
     prisma.user.findMany({ where: { approved: true }, orderBy: { createdAt: "desc" } }),
-    prisma.user.findMany({ where: { approved: false }, orderBy: { createdAt: "desc" } }),
+    // Only members who have confirmed their email are ready for admin approval.
+    prisma.user.findMany({ where: { approved: false, emailVerified: true }, orderBy: { createdAt: "desc" } }),
+    prisma.user.count({ where: { approved: false, emailVerified: false } }),
   ]);
   const rows = users.map((u) => ({
     id: u.id,
@@ -41,6 +43,11 @@ export default async function UsersPage() {
 
       {/* Pending member approvals */}
       <Panel title="Pending member approvals" className="mb-6" action={pending.length > 0 ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{pending.length} waiting</span> : undefined}>
+        {unverifiedCount > 0 && (
+          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-900/70 ring-1 ring-brand-100">
+            {unverifiedCount} {unverifiedCount === 1 ? "registrant has" : "registrants have"} not yet confirmed their email address, so they aren&apos;t shown here yet.
+          </p>
+        )}
         {pending.length === 0 ? (
           <EmptyState>No members are awaiting approval.</EmptyState>
         ) : (
