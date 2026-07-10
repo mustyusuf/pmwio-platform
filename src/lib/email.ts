@@ -91,7 +91,6 @@ export async function recipientsByRole(roles: string[]): Promise<string[]> {
 
 const BRAND = "#1A6B3A"; // PMWIO green
 const ORG = "Pious Muslim Women International Organization";
-const ORG_SHORT = "PMWIO";
 
 function escapeHtml(s: string): string {
   return s
@@ -120,6 +119,7 @@ export type LayoutOptions = {
  */
 export function layout(opts: LayoutOptions): Mail {
   const link = appUrl();
+  const logoUrl = `${link}/pmwio-logo.png`;
 
   const factsHtml = opts.facts?.length
     ? `<div style="margin:20px 0;padding:16px 18px;background:#f5f7f4;border:1px solid #e3e8e0;border-radius:8px;">
@@ -152,9 +152,9 @@ export function layout(opts: LayoutOptions): Mail {
 
   const html = `<div style="margin:0;padding:24px 12px;background:#eef1ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e3e8e0;">
-    <div style="background:${BRAND};padding:22px 28px;">
-      <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.2px;">${ORG_SHORT}</div>
-      <div style="color:#cfe3d6;font-size:12px;margin-top:2px;">${ORG}</div>
+    <div style="background:#ffffff;padding:26px 28px 20px;text-align:center;border-bottom:3px solid ${BRAND};">
+      <img src="${logoUrl}" alt="${ORG}" width="200" style="width:200px;max-width:72%;height:auto;display:inline-block;border:0;outline:none;text-decoration:none;" />
+      <div style="margin-top:12px;color:#6b7280;font-size:12px;letter-spacing:.2px;">${ORG}</div>
     </div>
     <div style="padding:28px;">
       <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;color:#111;">${escapeHtml(opts.heading)}</h1>
