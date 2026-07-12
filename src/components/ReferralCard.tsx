@@ -20,8 +20,8 @@ function CopyField({ label, value }: { label: string; value: string }) {
       <span className="text-xs font-medium uppercase tracking-wider text-brand-100/70">
         {label}
       </span>
-      <div className="mt-1.5 flex items-center gap-2">
-        <code className="flex-1 truncate rounded-lg bg-white/10 px-3 py-2 font-mono text-sm text-white ring-1 ring-white/15">
+      <div className="mt-1.5 flex min-w-0 items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-lg bg-white/10 px-3 py-2 font-mono text-sm text-white ring-1 ring-white/15">
           {value}
         </code>
         <button

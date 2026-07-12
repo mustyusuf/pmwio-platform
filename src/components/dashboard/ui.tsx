@@ -14,7 +14,7 @@ export function StatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-5 shadow-[0_14px_30px_rgba(18,39,25,0.18)] ${
+      className={`min-w-0 rounded-2xl border p-4 shadow-[0_14px_30px_rgba(18,39,25,0.18)] sm:p-5 ${
         accent ? "border-brand-200 bg-brand-50" : "border-brand-100 bg-white"
       }`}
     >
@@ -38,9 +38,9 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={`rounded-3xl border border-brand-100 bg-white p-6 shadow-sm ${className}`}>
+    <section className={`min-w-0 rounded-3xl border border-brand-100 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
       {(title || action) && (
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           {title && <h2 className="text-lg font-bold text-brand-950">{title}</h2>}
           {action}
         </div>

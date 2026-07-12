@@ -24,7 +24,7 @@ export async function MemberDashboard({ userId, code }: { userId: string; code: 
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Panel title="Awaiting your confirmation">
             <p className="-mt-2 mb-4 text-sm text-brand-900/60">
               As a referee you vouch for the people you refer. Confirm you know this
@@ -38,15 +38,15 @@ export async function MemberDashboard({ userId, code }: { userId: string; code: 
                   <form key={a.id} className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
                     <input type="hidden" name="applicationId" value={a.id} />
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-brand-900">{a.fullName}</p>
-                        <p className="text-xs text-brand-900/50">
+                      <div className="min-w-0">
+                        <p className="font-semibold break-words text-brand-900">{a.fullName}</p>
+                        <p className="text-xs break-words text-brand-900/50">
                           {PROGRAM_LABEL[a.category] ?? a.category} · Ref {a.reference} · {formatDate(a.createdAt)}
                         </p>
                       </div>
                       <StatusBadge status={a.status} />
                     </div>
-                    <p className="mt-2 text-sm text-brand-900/70">{a.details}</p>
+                    <p className="mt-2 text-sm break-words text-brand-900/70">{a.details}</p>
                     <textarea
                       name="comment"
                       rows={2}
@@ -86,7 +86,7 @@ export async function MemberDashboard({ userId, code }: { userId: string; code: 
           </Panel>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <ReferralCard refereeId={code} />
         </div>
       </div>
