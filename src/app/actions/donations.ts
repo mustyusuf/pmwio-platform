@@ -77,6 +77,7 @@ export async function startPublicDonation(formData: FormData) {
     },
   });
 
+  let authorizationUrl: string;
   try {
     const initialized = await initializePaystackTransaction({
       email: d.email,
@@ -90,11 +91,13 @@ export async function startPublicDonation(formData: FormData) {
         donorName: d.name,
       },
     });
-    redirect(initialized.authorization_url);
+    authorizationUrl = initialized.authorization_url;
   } catch (error) {
     await prisma.donation.update({ where: { id: donation.id }, data: { status: "FAILED" } });
     errorRedirect(returnPath, error instanceof Error ? error.message : "Unable to start payment.");
   }
+  // redirect() throws NEXT_REDIRECT, so it must run outside the try/catch above.
+  redirect(authorizationUrl);
 }
 
 const contributionSchema = z.object({
@@ -152,6 +155,7 @@ export async function startMonthlyContribution(formData: FormData) {
     },
   });
 
+  let authorizationUrl: string;
   try {
     const initialized = await initializePaystackTransaction({
       email: member.email,
@@ -165,11 +169,13 @@ export async function startMonthlyContribution(formData: FormData) {
         subscriptionId: subscription.id,
       },
     });
-    redirect(initialized.authorization_url);
+    authorizationUrl = initialized.authorization_url;
   } catch (error) {
     await prisma.donation.update({ where: { id: donation.id }, data: { status: "FAILED" } });
     errorRedirect("/dashboard/contributions", error instanceof Error ? error.message : "Unable to start payment.");
   }
+  // redirect() throws NEXT_REDIRECT, so it must run outside the try/catch above.
+  redirect(authorizationUrl);
 }
 
 async function requireCampaignAdmin() {
