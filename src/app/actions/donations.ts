@@ -159,6 +159,9 @@ export async function startMonthlyContribution(formData: FormData) {
   try {
     const initialized = await initializePaystackTransaction({
       email: member.email,
+      // Paystack requires the first-charge amount even when a plan is attached;
+      // it must match the plan amount so the initial charge and subscription agree.
+      amountKobo,
       reference: ref,
       callbackUrl: `${appUrl()}/api/paystack/callback`,
       planCode: plan.paystackPlanCode,
