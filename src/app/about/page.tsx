@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MarketingHero } from "@/components/MarketingHero";
 import { loadSiteContent } from "@/lib/content-store";
-import { impactCounters, applyCounters } from "@/lib/stats";
+import { impactStats } from "@/lib/stats";
 import { getTeamMembers } from "@/lib/team";
 
 export const metadata: Metadata = {
@@ -17,12 +17,8 @@ const APPROACH_ICONS = [Search, HandHeart, GraduationCap, Sprout];
 
 export default async function AboutPage() {
   const sc = await loadSiteContent();
-  const counters = await impactCounters();
+  const stats = await impactStats(sc);
   const team = await getTeamMembers();
-  const impactStats = [1, 2, 3, 4].map((n) => ({
-    value: applyCounters(sc.get(`impact.${n}.value`), counters),
-    label: sc.get(`impact.${n}.label`),
-  }));
   const approach = [1, 2, 3, 4].map((n, i) => ({ t: sc.get(`about.approach${n}.title`), d: sc.get(`about.approach${n}.desc`), Icon: APPROACH_ICONS[i] }));
   const values = [1, 2, 3, 4].map((n) => ({ t: sc.get(`about.value${n}.title`), d: sc.get(`about.value${n}.desc`) }));
   return (
@@ -54,7 +50,7 @@ export default async function AboutPage() {
         {/* Impact stats */}
         <section className="border-y border-brand-100 bg-brand-50">
           <div className="mx-auto grid max-w-5xl grid-cols-2 gap-6 px-4 py-12 sm:px-6 md:grid-cols-4">
-            {impactStats.map((s) => (
+            {stats.map((s) => (
               <div key={s.label} className="text-center">
                 <div className="text-3xl font-extrabold text-brand-700 sm:text-4xl">{s.value}</div>
                 <div className="mt-1 text-sm font-medium text-brand-900/70">{s.label}</div>

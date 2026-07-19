@@ -2,9 +2,7 @@ import { ORG, PROGRAMS } from "@/lib/content";
 
 export type ContentFieldType = "text" | "textarea" | "image";
 
-/** Live tokens an impact-stat value may contain (resolved by applyCounters). */
-export const IMPACT_TOKEN_HELP =
-  "Live figures: {members}, {empowerment}, {scholarship}, {orphanage}, {beneficiaries}. You can add text around them, e.g. \"{members}+\".";
+const STAT_LABEL_HELP = "The number above this label is counted live from the system and can't be edited.";
 
 export type ContentField = {
   key: string;
@@ -50,15 +48,12 @@ export const CONTENT_FIELDS: ContentField[] = [
   { key: "home.hero.image", label: "Hero background image", type: "image", section: "Home — Hero", default: "", help: "Optional. Adds a faded photo behind the hero." },
 
   // ----- Home — Impact stats -----
-  // Values support live {tokens} — see IMPACT_TOKEN_HELP below.
-  { key: "impact.1.value", label: "Stat 1 — value", type: "text", section: "Home — Impact stats", default: "{members}", help: IMPACT_TOKEN_HELP },
-  { key: "impact.1.label", label: "Stat 1 — label", type: "text", section: "Home — Impact stats", default: "Members worldwide" },
-  { key: "impact.2.value", label: "Stat 2 — value", type: "text", section: "Home — Impact stats", default: "{empowerment}", help: IMPACT_TOKEN_HELP },
-  { key: "impact.2.label", label: "Stat 2 — label", type: "text", section: "Home — Impact stats", default: "Widows empowered" },
-  { key: "impact.3.value", label: "Stat 3 — value", type: "text", section: "Home — Impact stats", default: "{scholarship}", help: IMPACT_TOKEN_HELP },
-  { key: "impact.3.label", label: "Stat 3 — label", type: "text", section: "Home — Impact stats", default: "Students on scholarship" },
-  { key: "impact.4.value", label: "Stat 4 — value", type: "text", section: "Home — Impact stats", default: "{orphanage}", help: IMPACT_TOKEN_HELP },
-  { key: "impact.4.label", label: "Stat 4 — label", type: "text", section: "Home — Impact stats", default: "Orphans cared for" },
+  // The numbers themselves are always computed live (see lib/stats.ts) — only
+  // the wording underneath each one is editable, so a stat can never go stale.
+  { key: "impact.1.label", label: "Stat 1 — label (members)", type: "text", section: "Home — Impact stats", default: "Members worldwide", help: STAT_LABEL_HELP },
+  { key: "impact.2.label", label: "Stat 2 — label (empowerment)", type: "text", section: "Home — Impact stats", default: "Widows empowered", help: STAT_LABEL_HELP },
+  { key: "impact.3.label", label: "Stat 3 — label (scholarship)", type: "text", section: "Home — Impact stats", default: "Students on scholarship", help: STAT_LABEL_HELP },
+  { key: "impact.4.label", label: "Stat 4 — label (orphanage)", type: "text", section: "Home — Impact stats", default: "Orphans cared for", help: STAT_LABEL_HELP },
 
   // ----- About page -----
   { key: "about.hero.eyebrow", label: "Hero eyebrow", type: "text", section: "About page", default: "About us" },

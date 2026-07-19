@@ -6,7 +6,7 @@ import { GallerySection } from "@/components/GallerySection";
 import { ProgramIcon } from "@/components/ProgramIcon";
 import { getGalleryData } from "@/lib/gallery";
 import { loadSiteContent, resolvePrograms } from "@/lib/content-store";
-import { impactCounters, applyCounters } from "@/lib/stats";
+import { impactStats } from "@/lib/stats";
 
 // Reads gallery items from the database, so render at request time rather than
 // statically at build time (the DB does not exist during the Docker build).
@@ -15,12 +15,8 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const { albums, photos } = await getGalleryData();
   const sc = await loadSiteContent();
-  const counters = await impactCounters();
+  const stats = await impactStats(sc);
   const heroImage = sc.image("home.hero.image");
-  const impactStats = [1, 2, 3, 4].map((n) => ({
-    value: applyCounters(sc.get(`impact.${n}.value`), counters),
-    label: sc.get(`impact.${n}.label`),
-  }));
   const programs = resolvePrograms(sc);
   const aboutCards = [1, 2, 3, 4].map((n) => ({ t: sc.get(`home.about.card${n}.title`), d: sc.get(`home.about.card${n}.desc`) }));
   return (
@@ -86,7 +82,7 @@ export default async function HomePage() {
         {/* ---------- Impact stats ---------- */}
         <section id="impact" className="border-b border-brand-100 bg-brand-50">
           <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-12 sm:px-6 md:grid-cols-4">
-            {impactStats.map((s) => (
+            {stats.map((s) => (
               <div key={s.label} className="text-center">
                 <div className="text-3xl font-extrabold text-brand-700 sm:text-4xl">
                   {s.value}

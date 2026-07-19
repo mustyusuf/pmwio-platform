@@ -1,32 +1,30 @@
 import { prisma } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
+import type { SiteContent } from "@/lib/siteContent";
 import { PROGRAMS } from "@/lib/content";
 import { PENDING_STATUSES, REJECTED_STATUSES } from "@/lib/status";
 
 /**
- * Live figures that public "impact stat" values can interpolate with a
- * `{token}`, so an administrator still controls the wording and suffix
- * (e.g. "{members}+") while the number itself stays current.
- *
- * Programme counts are approved applications, i.e. people actually supported.
+ * The four public "impact" figures, counted live so they can never go stale.
+ * Only each stat's label is admin-editable (see CONTENT_FIELDS); the numbers
+ * are always derived here. Programme counts are approved applications, i.e.
+ * people actually supported.
  */
-export async function impactCounters() {
-  const [members, empowerment, scholarship, orphanage, beneficiaries] = await Promise.all([
+export async function impactStats(sc: SiteContent) {
+  const [members, empowerment, scholarship, orphanage] = await Promise.all([
     prisma.user.count({ where: { role: ROLES.MEMBER, active: true } }),
     prisma.application.count({ where: { category: "EMPOWERMENT", status: "APPROVED" } }),
     prisma.application.count({ where: { category: "SCHOLARSHIP", status: "APPROVED" } }),
     prisma.application.count({ where: { category: "ORPHANAGE", status: "APPROVED" } }),
-    prisma.user.count({ where: { role: ROLES.BENEFICIARY } }),
   ]);
-  return { members, empowerment, scholarship, orphanage, beneficiaries };
-}
-
-/** Substitutes `{token}`s in an impact stat value; unknown tokens are left as-is. */
-export function applyCounters(value: string, counters: Record<string, number>) {
-  return value.replace(/\{(\w+)\}/g, (match, token: string) =>
-    // Fixed locale so server and client render identical text.
-    token in counters ? counters[token].toLocaleString("en-GB") : match,
-  );
+  // Fixed locale so the server and client render identical text.
+  const format = (n: number) => n.toLocaleString("en-GB");
+  return [
+    { value: format(members), label: sc.get("impact.1.label") },
+    { value: format(empowerment), label: sc.get("impact.2.label") },
+    { value: format(scholarship), label: sc.get("impact.3.label") },
+    { value: format(orphanage), label: sc.get("impact.4.label") },
+  ];
 }
 
 /** Labels for the last `n` months, oldest first, with a key for matching. */
