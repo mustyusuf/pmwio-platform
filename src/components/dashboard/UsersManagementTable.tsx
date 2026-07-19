@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { setUserActive } from "@/app/actions/workflow";
+import { DeleteUserButton } from "./DeleteUserButton";
 import { ROLE_LABEL } from "@/lib/roles";
 import { formatDate } from "@/lib/format";
 
@@ -80,13 +81,16 @@ export function UsersManagementTable({ rows, selfId }: { rows: UserRow[]; selfId
                   </span>
                 </td>
                 <td className="px-4 py-3 text-brand-900/60">{formatDate(u.createdAt)}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3">
                   {u.id !== selfId && (
-                    <form action={setUserActive}>
-                      <input type="hidden" name="userId" value={u.id} />
-                      <input type="hidden" name="active" value={(!u.active).toString()} />
-                      <button className="text-xs font-semibold text-brand-700 hover:text-brand-900">{u.active ? "Disable" : "Enable"}</button>
-                    </form>
+                    <div className="flex items-center justify-end gap-3">
+                      <form action={setUserActive}>
+                        <input type="hidden" name="userId" value={u.id} />
+                        <input type="hidden" name="active" value={(!u.active).toString()} />
+                        <button className="text-xs font-semibold text-brand-700 hover:text-brand-900">{u.active ? "Disable" : "Enable"}</button>
+                      </form>
+                      <DeleteUserButton userId={u.id} name={u.name} role={ROLE_LABEL[u.role] ?? u.role} />
+                    </div>
                   )}
                 </td>
               </tr>

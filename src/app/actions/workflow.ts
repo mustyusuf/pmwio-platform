@@ -344,6 +344,57 @@ export async function approveMember(formData: FormData) {
   revalidatePath("/dashboard/users");
 }
 
+/**
+ * Records a user leaves behind that must never be silently destroyed: they are
+ * someone else's audit trail (who reviewed/approved what) or organizational
+ * content. An account holding any of these can only be disabled, not deleted.
+ */
+async function blockingRecords(userId: string) {
+  const [reviews, approvals, termReports, campaigns] = await Promise.all([
+    prisma.review.count({ where: { reviewerId: userId } }),
+    prisma.paymentApproval.count({ where: { approverId: userId } }),
+    prisma.termReport.count({ where: { coordinatorId: userId } }),
+    prisma.donationCampaign.count({ where: { createdById: userId } }),
+  ]);
+  const blockers: string[] = [];
+  if (reviews > 0) blockers.push(`${reviews} application review(s)`);
+  if (approvals > 0) blockers.push(`${approvals} payment approval(s)`);
+  if (termReports > 0) blockers.push(`${termReports} term report(s)`);
+  if (campaigns > 0) blockers.push(`${campaigns} donation campaign(s)`);
+  return blockers;
+}
+
+/**
+ * Permanently removes an account. Personal records (login tokens, in-app
+ * notifications) are deleted with it; shared records are detached rather than
+ * destroyed, so donations stay in the ledger and applications keep their
+ * history — they simply no longer point at a user row.
+ */
+async function purgeUser(userId: string) {
+  const subscription = await prisma.contributionSubscription.findUnique({ where: { memberId: userId } });
+  await prisma.$transaction([
+    // Personal to the account — safe to remove.
+    prisma.notification.deleteMany({ where: { userId } }),
+    prisma.passwordReset.deleteMany({ where: { userId } }),
+    prisma.emailVerification.deleteMany({ where: { userId } }),
+    // Detach shared history so the records survive the account.
+    prisma.application.updateMany({ where: { beneficiaryId: userId }, data: { beneficiaryId: null } }),
+    prisma.application.updateMany({ where: { referredById: userId }, data: { referredById: null } }),
+    prisma.donation.updateMany({ where: { memberId: userId }, data: { memberId: null } }),
+    prisma.activityLog.updateMany({ where: { userId }, data: { userId: null } }),
+    prisma.payment.updateMany({ where: { createdById: userId }, data: { createdById: null } }),
+    prisma.payment.updateMany({ where: { approvedById: userId }, data: { approvedById: null } }),
+    // The subscription row is personal, but its donations are ledger entries.
+    ...(subscription
+      ? [
+          prisma.donation.updateMany({ where: { subscriptionId: subscription.id }, data: { subscriptionId: null } }),
+          prisma.contributionSubscription.delete({ where: { id: subscription.id } }),
+        ]
+      : []),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+}
+
 /** Decline a pending member registration (removes the unapproved account). */
 export async function rejectMember(formData: FormData) {
   const me = await requireRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
@@ -352,10 +403,43 @@ export async function rejectMember(formData: FormData) {
   if (user && !user.approved) {
     // Email #5 (applicant) before removing the account.
     await send(user.email, tpl.memberDeclined(user.name));
-    await prisma.user.delete({ where: { id } });
+    await purgeUser(user.id);
     await prisma.activityLog.create({ data: { userId: me.id, action: "MEMBER_DECLINED", detail: `${user.name} (${user.email})` } });
   }
   revalidatePath("/dashboard/users");
+}
+
+export type DeleteUserState = { error?: string; ok?: string } | null;
+
+/** Permanently deletes any account from the Users table. */
+export async function deleteUser(_prev: DeleteUserState, formData: FormData): Promise<DeleteUserState> {
+  const me = await requireRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+  const id = String(formData.get("userId"));
+
+  if (id === me.id) return { error: "You can't delete your own account." };
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) return { error: "That account no longer exists." };
+
+  // Never allow the last administrator to be removed — it would lock everyone out.
+  if (user.role === ROLES.ADMIN) {
+    const admins = await prisma.user.count({ where: { role: ROLES.ADMIN, active: true } });
+    if (admins <= 1) return { error: "This is the only active administrator. Promote another admin first." };
+  }
+
+  const blockers = await blockingRecords(id);
+  if (blockers.length > 0) {
+    return {
+      error: `${user.name} can't be deleted — the account holds ${blockers.join(", ")} that other records depend on. Disable the account instead.`,
+    };
+  }
+
+  await purgeUser(id);
+  await prisma.activityLog.create({
+    data: { userId: me.id, action: "USER_DELETED", detail: `${user.name} (${user.email}) · ${user.role}` },
+  });
+  revalidatePath("/dashboard/users");
+  return { ok: `${user.name}'s account has been deleted.` };
 }
 
 export async function updateSettings(_prev: AdminState, formData: FormData): Promise<AdminState> {
