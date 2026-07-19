@@ -27,7 +27,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
                 <p className="mt-2 text-sm text-brand-900/70">
                   {result.alreadyVerified
                     ? "Your email address is already confirmed."
-                    : "Thank you — your email address has been confirmed. An administrator will review your membership and you'll be notified once your account is approved."}
+                    : "Thank you — your email address has been confirmed. You can log in to your dashboard now."}
                 </p>
                 <Link href="/login" className="mt-6 inline-block rounded-xl bg-brand-700 px-5 py-3 font-semibold text-white hover:bg-brand-800">
                   Go to login

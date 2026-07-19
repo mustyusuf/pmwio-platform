@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Images, X, Calendar } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Images, X, Calendar } from "lucide-react";
 import { GALLERY_CATEGORIES } from "@/lib/content";
 import type { GalleryAlbumDTO, GalleryPhotoDTO } from "@/lib/gallery";
 
@@ -26,6 +27,7 @@ export function GallerySection({
   heading = true,
   background = true,
   limit,
+  viewAllHref,
   headingEyebrow = "Gallery",
   headingTitle = "Moments from our work",
   headingSubtitle = "A glimpse of the lives we touch across our programs.",
@@ -35,6 +37,8 @@ export function GallerySection({
   heading?: boolean;
   background?: boolean;
   limit?: number;
+  /** When set, shows a "View all Gallery" link below the tiles. */
+  viewAllHref?: string;
   headingEyebrow?: string;
   headingTitle?: string;
   headingSubtitle?: string;
@@ -181,6 +185,18 @@ export function GallerySection({
                 </div>
               </button>
             ))}
+          </div>
+        )}
+
+        {viewAllHref && (
+          <div className="mt-10 text-center">
+            <Link
+              href={viewAllHref}
+              className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-7 py-3 text-sm font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 hover:text-brand-900"
+            >
+              View all Gallery
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
           </div>
         )}
       </div>

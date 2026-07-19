@@ -22,8 +22,8 @@ export function RegisterForm() {
         <CircleCheckBig className="mx-auto h-9 w-9 text-emerald-700" aria-hidden />
         <h3 className="mt-2 text-lg font-bold text-emerald-900">Check your email</h3>
         <p className="mt-2 text-sm text-emerald-800">
-          We&apos;ve sent a <strong>confirmation link</strong> to your email address. Please confirm it to
-          continue. After that, an administrator will review your membership and activate your account.
+          We&apos;ve sent a <strong>confirmation link</strong> to your email address. Confirm it and you can
+          log in to your dashboard straight away.
         </p>
         <p className="mt-3 text-xs text-emerald-800/80">
           Didn&apos;t get it? <a href="/verify-email" className="font-semibold underline">Resend the confirmation link</a>.

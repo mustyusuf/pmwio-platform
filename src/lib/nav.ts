@@ -94,6 +94,7 @@ export function navForRole(role: string, opts: { empowermentOpen?: boolean } = {
       { label: "Users", href: "/dashboard/users", icon: "user-cog" },
       { label: "Form Builder", href: "/dashboard/form-fields", icon: "file-plus" },
       { label: "Gallery", href: "/dashboard/gallery", icon: "image" },
+      { label: "Management Team", href: "/dashboard/team", icon: "users" },
       { label: "Site Content", href: "/dashboard/content", icon: "pencil" },
       { label: "Settings", href: "/dashboard/settings", icon: "settings" },
     );

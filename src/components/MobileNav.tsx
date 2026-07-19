@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { SocialIconLinks } from "./SocialLinks";
+import type { SocialLink } from "@/lib/social";
 
 type NavLink = { href: string; label: string };
 
 export function MobileNav({
   links,
   isLoggedIn,
+  socials = [],
 }: {
   links: NavLink[];
   isLoggedIn: boolean;
+  socials?: SocialLink[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -68,6 +72,11 @@ export function MobileNav({
                 </>
               )}
             </div>
+            {socials.length > 0 && (
+              <div className="mt-3 border-t border-brand-100 pt-3">
+                <SocialIconLinks links={socials} className="justify-center" />
+              </div>
+            )}
           </nav>
         </div>
       )}

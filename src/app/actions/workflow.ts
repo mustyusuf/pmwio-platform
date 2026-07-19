@@ -329,12 +329,13 @@ export async function setUserActive(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
-/** Approve a self-registered member so they can log in. */
+/** Validate a self-registered member. Access is already granted by email
+ *  confirmation, so this records the administrator's sign-off. */
 export async function approveMember(formData: FormData) {
   const me = await requireRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
   const id = String(formData.get("userId"));
   const user = await prisma.user.update({ where: { id }, data: { approved: true, active: true } });
-  await prisma.notification.create({ data: { userId: id, title: "Account approved 🎉", body: "Your membership has been approved. You can now log in." } });
+  await prisma.notification.create({ data: { userId: id, title: "Membership validated 🎉", body: "An administrator has validated your membership." } });
   await prisma.activityLog.create({ data: { userId: me.id, action: "MEMBER_APPROVED", detail: `${user.name} (${user.userId})` } });
 
   // Email #4 (member): account activated, with User ID and login link.
@@ -383,6 +384,24 @@ export async function toggleEmpowerment(formData: FormData) {
     create: { id: "singleton", empowermentOpen: open },
   });
   await prisma.activityLog.create({ data: { userId: me.id, action: open ? "EMPOWERMENT_OPENED" : "EMPOWERMENT_CLOSED", detail: "members' empowerment window" } });
+  revalidatePath("/dashboard");
+}
+
+export async function toggleMemberValidation(formData: FormData) {
+  const me = await requireRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+  const open = String(formData.get("open")) === "true";
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    update: { memberValidationOpen: open },
+    create: { id: "singleton", memberValidationOpen: open },
+  });
+  await prisma.activityLog.create({
+    data: {
+      userId: me.id,
+      action: open ? "MEMBER_VALIDATION_OPENED" : "MEMBER_VALIDATION_CLOSED",
+      detail: "member validation window",
+    },
+  });
   revalidatePath("/dashboard");
 }
 

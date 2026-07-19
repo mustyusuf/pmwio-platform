@@ -31,25 +31,26 @@ const DASHBOARD = () => link("/dashboard");
 // 1. Account lifecycle
 // ===========================================================================
 
-// #1 — new member, after self-registration (held for approval)
+// #1 — new member, once their email address is confirmed (access is immediate)
 export function memberRegistrationPending(name: string): Mail {
   return layout({
-    subject: "We've received your registration",
-    heading: "Thanks for registering",
+    subject: "Your membership is active",
+    heading: "Welcome to PMWIO",
     intro: `Hi ${firstName(name)},`,
     body: [
       "Thank you for registering with the Pious Muslim Women International Organization.",
-      "An administrator will review your details shortly. You'll receive another email once your membership is approved, and then you'll be able to log in.",
+      "Your email address is confirmed and your account is ready — you can log in to your dashboard now.",
     ],
+    cta: { label: "Go to your dashboard", url: DASHBOARD() },
   });
 }
 
-// #2 — admins & executives, prompt to review a pending member
+// #2 — admins & executives, prompt to validate a newly confirmed member
 export function memberRegistrationAlert(name: string, email: string): Mail {
   return layout({
-    subject: `New member awaiting approval — ${name}`,
+    subject: `New member to validate — ${name}`,
     heading: "New member registration",
-    body: [`${escapeText(name)} has registered and is awaiting approval.`],
+    body: [`${escapeText(name)} has registered and confirmed their email address.`],
     facts: [
       { label: "Name", value: name },
       { label: "Email", value: email },

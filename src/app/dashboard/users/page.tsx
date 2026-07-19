@@ -37,19 +37,24 @@ export default async function UsersPage() {
       <PageHeader
         title="Users"
         count={users.length}
-        subtitle="Approve new members, manage accounts and create staff users."
+        subtitle="Validate new members, manage accounts and create staff users."
         action={<CreateUserForm />}
       />
 
-      {/* Pending member approvals */}
-      <Panel title="Pending member approvals" className="mb-6" action={pending.length > 0 ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{pending.length} waiting</span> : undefined}>
-        {unverifiedCount > 0 && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-900/70 ring-1 ring-brand-100">
-            {unverifiedCount} {unverifiedCount === 1 ? "registrant has" : "registrants have"} not yet confirmed their email address, so they aren&apos;t shown here yet.
-          </p>
-        )}
+      {/* Members awaiting an administrator's validation. They can already log in. */}
+      <Panel title="Members to validate" className="mb-6" action={pending.length > 0 ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">{pending.length} waiting</span> : undefined}>
+        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-900/70 ring-1 ring-brand-100">
+          These members have confirmed their email address and already have access to their dashboard.
+          Validating them is a record of your sign-off, not a gate on their account.
+          {unverifiedCount > 0 && (
+            <>
+              {" "}
+              {unverifiedCount} other {unverifiedCount === 1 ? "registrant has" : "registrants have"} not confirmed their email yet, so they aren&apos;t shown here.
+            </>
+          )}
+        </p>
         {pending.length === 0 ? (
-          <EmptyState>No members are awaiting approval.</EmptyState>
+          <EmptyState>No members are awaiting validation.</EmptyState>
         ) : (
           <ul className="divide-y divide-brand-100">
             {pending.map((p) => (

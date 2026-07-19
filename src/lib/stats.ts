@@ -1,6 +1,33 @@
 import { prisma } from "@/lib/db";
+import { ROLES } from "@/lib/roles";
 import { PROGRAMS } from "@/lib/content";
 import { PENDING_STATUSES, REJECTED_STATUSES } from "@/lib/status";
+
+/**
+ * Live figures that public "impact stat" values can interpolate with a
+ * `{token}`, so an administrator still controls the wording and suffix
+ * (e.g. "{members}+") while the number itself stays current.
+ *
+ * Programme counts are approved applications, i.e. people actually supported.
+ */
+export async function impactCounters() {
+  const [members, empowerment, scholarship, orphanage, beneficiaries] = await Promise.all([
+    prisma.user.count({ where: { role: ROLES.MEMBER, active: true } }),
+    prisma.application.count({ where: { category: "EMPOWERMENT", status: "APPROVED" } }),
+    prisma.application.count({ where: { category: "SCHOLARSHIP", status: "APPROVED" } }),
+    prisma.application.count({ where: { category: "ORPHANAGE", status: "APPROVED" } }),
+    prisma.user.count({ where: { role: ROLES.BENEFICIARY } }),
+  ]);
+  return { members, empowerment, scholarship, orphanage, beneficiaries };
+}
+
+/** Substitutes `{token}`s in an impact stat value; unknown tokens are left as-is. */
+export function applyCounters(value: string, counters: Record<string, number>) {
+  return value.replace(/\{(\w+)\}/g, (match, token: string) =>
+    // Fixed locale so server and client render identical text.
+    token in counters ? counters[token].toLocaleString("en-GB") : match,
+  );
+}
 
 /** Labels for the last `n` months, oldest first, with a key for matching. */
 function lastMonths(n: number) {

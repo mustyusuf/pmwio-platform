@@ -5,6 +5,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MarketingHero } from "@/components/MarketingHero";
 import { loadSiteContent } from "@/lib/content-store";
+import { impactCounters, applyCounters } from "@/lib/stats";
+import { getTeamMembers } from "@/lib/team";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -15,7 +17,12 @@ const APPROACH_ICONS = [Search, HandHeart, GraduationCap, Sprout];
 
 export default async function AboutPage() {
   const sc = await loadSiteContent();
-  const impactStats = [1, 2, 3, 4].map((n) => ({ value: sc.get(`impact.${n}.value`), label: sc.get(`impact.${n}.label`) }));
+  const counters = await impactCounters();
+  const team = await getTeamMembers();
+  const impactStats = [1, 2, 3, 4].map((n) => ({
+    value: applyCounters(sc.get(`impact.${n}.value`), counters),
+    label: sc.get(`impact.${n}.label`),
+  }));
   const approach = [1, 2, 3, 4].map((n, i) => ({ t: sc.get(`about.approach${n}.title`), d: sc.get(`about.approach${n}.desc`), Icon: APPROACH_ICONS[i] }));
   const values = [1, 2, 3, 4].map((n) => ({ t: sc.get(`about.value${n}.title`), d: sc.get(`about.value${n}.desc`) }));
   return (
@@ -89,6 +96,38 @@ export default async function AboutPage() {
             </div>
           </div>
         </section>
+
+        {/* Management team — cards are maintained in Dashboard → Management team */}
+        {team.length > 0 && (
+          <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="text-sm font-semibold uppercase tracking-wider text-brand-600">{sc.get("about.team.eyebrow")}</span>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-brand-950 sm:text-3xl">{sc.get("about.team.title")}</h2>
+              <p className="mt-4 text-brand-900/70">{sc.get("about.team.subtitle")}</p>
+            </div>
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {team.map((m) => (
+                <div key={m.id} className="flex flex-col overflow-hidden rounded-3xl border border-brand-100 bg-white shadow-sm">
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-brand-100">
+                    {m.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.image} alt={m.name} loading="lazy" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-4xl font-extrabold text-brand-700/60">
+                        {m.initials}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
+                    <h3 className="text-lg font-bold text-brand-950">{m.name}</h3>
+                    <p className="mt-1 text-sm font-semibold text-brand-700">{m.role}</p>
+                    {m.bio && <p className="mt-3 text-sm leading-relaxed text-brand-900/70">{m.bio}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* CTA */}
         <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6">

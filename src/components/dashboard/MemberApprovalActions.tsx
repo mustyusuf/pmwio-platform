@@ -28,7 +28,7 @@ export function MemberApprovalActions({ userId, name }: { userId: string; name: 
           className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
         >
           <Check className="h-4 w-4" aria-hidden />
-          Approve
+          Validate
         </button>
         <button
           type="button"
@@ -58,12 +58,12 @@ export function MemberApprovalActions({ userId, name }: { userId: string; name: 
               {approving ? <Check className="h-5 w-5" aria-hidden /> : <AlertTriangle className="h-5 w-5" aria-hidden />}
             </div>
             <h2 id="member-decision-title" className="mt-4 text-lg font-bold text-brand-950">
-              {approving ? "Approve member?" : "Decline member?"}
+              {approving ? "Validate member?" : "Remove member?"}
             </h2>
             <p id="member-decision-description" className="mt-2 text-sm leading-relaxed text-brand-900/65">
               {approving
-                ? `${name} will be granted access to log in and use the member dashboard.`
-                : `${name}'s pending registration will be permanently deleted. This action cannot be undone.`}
+                ? `${name} will be marked as a validated member. They already have access to their dashboard.`
+                : `${name}'s account will be permanently deleted, including their access. This action cannot be undone.`}
             </p>
 
             <div className="mt-6 flex justify-end gap-3">

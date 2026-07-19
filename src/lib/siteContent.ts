@@ -2,6 +2,10 @@ import { ORG, PROGRAMS } from "@/lib/content";
 
 export type ContentFieldType = "text" | "textarea" | "image";
 
+/** Live tokens an impact-stat value may contain (resolved by applyCounters). */
+export const IMPACT_TOKEN_HELP =
+  "Live figures: {members}, {empowerment}, {scholarship}, {orphanage}, {beneficiaries}. You can add text around them, e.g. \"{members}+\".";
+
 export type ContentField = {
   key: string;
   label: string;
@@ -24,6 +28,20 @@ export const CONTENT_FIELDS: ContentField[] = [
   { key: "org.phone", label: "Contact phone", type: "text", section: "Organization", default: ORG.phone },
   { key: "org.address", label: "Address / location", type: "text", section: "Organization", default: "Abuja, Nigeria" },
 
+  // ----- Social media (header icons + contact page handles) -----
+  // Leave a URL blank to hide that network everywhere on the site.
+  { key: "org.social.facebook.url", label: "Facebook link", type: "text", section: "Social media", default: "https://facebook.com/share/p/1DEDvHQwxQ/?mibextid=wwXIfr&ref=1" },
+  { key: "org.social.facebook.handle", label: "Facebook username", type: "text", section: "Social media", default: "Pious Muslim Women", help: "Shown next to the icon on the contact page." },
+  { key: "org.social.instagram.url", label: "Instagram link", type: "text", section: "Social media", default: "https://www.instagram.com/piousmuslimwomenorg" },
+  { key: "org.social.instagram.handle", label: "Instagram username", type: "text", section: "Social media", default: "@piousmuslimwomenorg" },
+  { key: "org.social.tiktok.url", label: "TikTok link", type: "text", section: "Social media", default: "https://www.tiktok.com/@pious_muslimwomen1" },
+  { key: "org.social.tiktok.handle", label: "TikTok username", type: "text", section: "Social media", default: "@pious_muslimwomen1" },
+
+  // ----- About — Management team (cards are managed under Dashboard → Management team) -----
+  { key: "about.team.eyebrow", label: "Team eyebrow", type: "text", section: "About — Management team", default: "Our people" },
+  { key: "about.team.title", label: "Team heading", type: "text", section: "About — Management team", default: "Meet our management team" },
+  { key: "about.team.subtitle", label: "Team intro", type: "textarea", section: "About — Management team", default: "The people leading our work and holding us accountable to the communities we serve." },
+
   // ----- Home — Hero -----
   { key: "home.hero.badge", label: "Hero badge", type: "text", section: "Home — Hero", default: "A global Islamic NGO · Members across 4 continents" },
   { key: "home.hero.heading", label: "Hero heading", type: "text", section: "Home — Hero", default: "Pious Muslim Women" },
@@ -32,13 +50,14 @@ export const CONTENT_FIELDS: ContentField[] = [
   { key: "home.hero.image", label: "Hero background image", type: "image", section: "Home — Hero", default: "", help: "Optional. Adds a faded photo behind the hero." },
 
   // ----- Home — Impact stats -----
-  { key: "impact.1.value", label: "Stat 1 — value", type: "text", section: "Home — Impact stats", default: "1,200+" },
+  // Values support live {tokens} — see IMPACT_TOKEN_HELP below.
+  { key: "impact.1.value", label: "Stat 1 — value", type: "text", section: "Home — Impact stats", default: "{members}", help: IMPACT_TOKEN_HELP },
   { key: "impact.1.label", label: "Stat 1 — label", type: "text", section: "Home — Impact stats", default: "Members worldwide" },
-  { key: "impact.2.value", label: "Stat 2 — value", type: "text", section: "Home — Impact stats", default: "350+" },
+  { key: "impact.2.value", label: "Stat 2 — value", type: "text", section: "Home — Impact stats", default: "{empowerment}", help: IMPACT_TOKEN_HELP },
   { key: "impact.2.label", label: "Stat 2 — label", type: "text", section: "Home — Impact stats", default: "Widows empowered" },
-  { key: "impact.3.value", label: "Stat 3 — value", type: "text", section: "Home — Impact stats", default: "500+" },
+  { key: "impact.3.value", label: "Stat 3 — value", type: "text", section: "Home — Impact stats", default: "{scholarship}", help: IMPACT_TOKEN_HELP },
   { key: "impact.3.label", label: "Stat 3 — label", type: "text", section: "Home — Impact stats", default: "Students on scholarship" },
-  { key: "impact.4.value", label: "Stat 4 — value", type: "text", section: "Home — Impact stats", default: "40+" },
+  { key: "impact.4.value", label: "Stat 4 — value", type: "text", section: "Home — Impact stats", default: "{orphanage}", help: IMPACT_TOKEN_HELP },
   { key: "impact.4.label", label: "Stat 4 — label", type: "text", section: "Home — Impact stats", default: "Orphans cared for" },
 
   // ----- About page -----

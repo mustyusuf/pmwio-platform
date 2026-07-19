@@ -3,7 +3,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MarketingHero } from "@/components/MarketingHero";
 import { ContactForm } from "@/components/forms/ContactForm";
+import { SocialHandleLinks } from "@/components/SocialLinks";
 import { loadSiteContent } from "@/lib/content-store";
+import { socialLinks } from "@/lib/social";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -14,6 +16,7 @@ export default async function ContactPage() {
   const sc = await loadSiteContent();
   const email = sc.get("org.email");
   const phone = sc.get("org.phone");
+  const socials = socialLinks(sc);
   return (
     <>
       <SiteHeader />
@@ -42,6 +45,12 @@ export default async function ContactPage() {
                 </li>
               </ul>
             </div>
+            {socials.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-600">Follow us</h2>
+                <SocialHandleLinks links={socials} />
+              </div>
+            )}
             <div className="rounded-2xl bg-brand-50 p-5 ring-1 ring-brand-100">
               <p className="text-sm text-brand-900/75">{sc.get("contact.member.note")}</p>
             </div>

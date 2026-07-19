@@ -6,7 +6,7 @@ import { getSettings, eligibleCount, clampQuorum } from "@/lib/settings";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/ui";
 import { SettingsForm } from "@/components/dashboard/SettingsForm";
-import { toggleEmpowerment } from "@/app/actions/workflow";
+import { toggleEmpowerment, toggleMemberValidation } from "@/app/actions/workflow";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -45,6 +45,25 @@ export default async function SettingsPage() {
               <input type="hidden" name="open" value={(!settings.empowermentOpen).toString()} />
               <button className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${settings.empowermentOpen ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
                 {settings.empowermentOpen ? "Close window" : "Open window"}
+              </button>
+            </form>
+          </div>
+        </Panel>
+
+        <Panel title="Member validation">
+          <p className="text-sm text-brand-900/70">
+            Members can always sign in once they confirm their email address — validation never blocks access.
+            When this window is open, administrators are notified by email and in-app so they can validate new
+            members afterwards. Close it to stop those requests coming through.
+          </p>
+          <div className="mt-4 flex items-center gap-3">
+            <span className={`rounded-full px-3 py-1 text-sm font-semibold ${settings.memberValidationOpen ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"}`}>
+              Currently {settings.memberValidationOpen ? "OPEN" : "CLOSED"}
+            </span>
+            <form action={toggleMemberValidation}>
+              <input type="hidden" name="open" value={(!settings.memberValidationOpen).toString()} />
+              <button className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${settings.memberValidationOpen ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+                {settings.memberValidationOpen ? "Close window" : "Open window"}
               </button>
             </form>
           </div>

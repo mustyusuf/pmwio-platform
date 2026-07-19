@@ -209,6 +209,9 @@ model Settings {
   boardQuorum     Int      @default(2) // approvals needed at the Board stage
   executiveQuorum Int      @default(2) // approvals needed at the Executive stage
   empowermentOpen Boolean  @default(false) // is the members' empowerment window open?
+  // Members always get access once their email is confirmed. This only controls
+  // whether admins are queued/emailed to validate them afterwards.
+  memberValidationOpen Boolean @default(true)
   updatedAt       DateTime @updatedAt
 }
 
@@ -375,6 +378,21 @@ model ActivityLog {
   action    String
   detail    String?
   createdAt DateTime @default(now())
+}
+
+/// A member of the organization's management team, shown as a card on the
+/// public About page and maintained by an administrator from the dashboard.
+model TeamMember {
+  id         String   @id @default(cuid())
+  name       String
+  role       String // e.g. "Founder & President"
+  bio        String? // optional short description shown under the role
+  storedName String? // uploaded portrait (filename in ./uploads)
+  mimeType   String?
+  order      Int      @default(0)
+  active     Boolean  @default(true) // inactive members are hidden from the public page
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 /// Editable public-site content (CMS). Keyed by a stable identifier; `value`

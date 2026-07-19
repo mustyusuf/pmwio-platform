@@ -6,6 +6,7 @@ import { GallerySection } from "@/components/GallerySection";
 import { ProgramIcon } from "@/components/ProgramIcon";
 import { getGalleryData } from "@/lib/gallery";
 import { loadSiteContent, resolvePrograms } from "@/lib/content-store";
+import { impactCounters, applyCounters } from "@/lib/stats";
 
 // Reads gallery items from the database, so render at request time rather than
 // statically at build time (the DB does not exist during the Docker build).
@@ -14,8 +15,12 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const { albums, photos } = await getGalleryData();
   const sc = await loadSiteContent();
+  const counters = await impactCounters();
   const heroImage = sc.image("home.hero.image");
-  const impactStats = [1, 2, 3, 4].map((n) => ({ value: sc.get(`impact.${n}.value`), label: sc.get(`impact.${n}.label`) }));
+  const impactStats = [1, 2, 3, 4].map((n) => ({
+    value: applyCounters(sc.get(`impact.${n}.value`), counters),
+    label: sc.get(`impact.${n}.label`),
+  }));
   const programs = resolvePrograms(sc);
   const aboutCards = [1, 2, 3, 4].map((n) => ({ t: sc.get(`home.about.card${n}.title`), d: sc.get(`home.about.card${n}.desc`) }));
   return (
@@ -182,7 +187,8 @@ export default async function HomePage() {
         <GallerySection
           albums={albums}
           photos={photos}
-          limit={6}
+          limit={3}
+          viewAllHref="/gallery"
           headingEyebrow={sc.get("gallery.hero.eyebrow")}
           headingTitle={sc.get("gallery.hero.title")}
           headingSubtitle={sc.get("gallery.hero.subtitle")}

@@ -8,6 +8,7 @@ import { hashPassword, verifyPassword, generateUserId } from "@/lib/auth";
 import { createSession, destroySession } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
 import { send, link, recipientsByRole } from "@/lib/email";
+import { getSettings } from "@/lib/settings";
 import { memberRegistrationPending, memberRegistrationAlert, verifyEmail } from "@/lib/email-templates";
 
 export type AuthState = { error?: string; pending?: boolean } | null;
@@ -75,8 +76,9 @@ export async function registerAction(
     return { error: "An account with that email already exists. Please log in." };
   }
 
-  // Public registration creates a Member / Referee account that stays inactive
-  // until the applicant confirms their email AND an administrator approves it.
+  // Public registration creates a Member / Referee account that stays locked
+  // until the applicant confirms their email. Administrator validation happens
+  // afterwards and does not block access.
   const user = await prisma.user.create({
     data: {
       name,
@@ -133,9 +135,8 @@ export async function loginAction(
   if (!user.emailVerified) {
     return { error: "Please confirm your email address first. Check your inbox for the confirmation link, or request a new one at /verify-email." };
   }
-  if (!user.approved) {
-    return { error: "Your account is awaiting administrator approval. Please check back soon." };
-  }
+  // Administrator approval is no longer a gate: confirming the email address is
+  // enough to sign in. Admins validate members after the fact (see Settings).
   if (!user.active) {
     return { error: "This account has been disabled. Please contact the organization." };
   }
@@ -180,21 +181,30 @@ export async function verifyEmailToken(rawToken: string): Promise<VerifyEmailRes
   await prisma.user.update({ where: { id: record.userId }, data: { emailVerified: true } });
   await prisma.activityLog.create({ data: { userId: record.userId, action: "EMAIL_VERIFIED", detail: record.user.email } });
 
-  // Now that ownership is proven, queue the member for admin approval.
-  const admins = await prisma.user.findMany({
-    where: { active: true, role: { in: [ROLES.ADMIN, ROLES.EXECUTIVE] } },
-    select: { id: true },
-  });
-  if (admins.length > 0) {
-    await prisma.notification.createMany({
-      data: admins.map((a) => ({ userId: a.id, title: "New member awaiting approval", body: `${record.user.name} confirmed their email and needs approval.` })),
-    });
-  }
-
-  // Email #1 (member: registration confirmed, pending approval) and #2 (staff alert).
+  // Email #1 — the member can now sign in; no approval wait.
   await send(record.user.email, memberRegistrationPending(record.user.name));
-  const staff = await recipientsByRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
-  if (staff.length > 0) await send(staff, memberRegistrationAlert(record.user.name, record.user.email));
+
+  // Admin validation is an optional review queue. When the window is closed we
+  // skip the notifications and staff alert entirely.
+  const { memberValidationOpen } = await getSettings();
+  if (memberValidationOpen) {
+    const admins = await prisma.user.findMany({
+      where: { active: true, role: { in: [ROLES.ADMIN, ROLES.EXECUTIVE] } },
+      select: { id: true },
+    });
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map((a) => ({
+          userId: a.id,
+          title: "New member to validate",
+          body: `${record.user.name} confirmed their email and is awaiting validation.`,
+        })),
+      });
+    }
+    // Email #2 — staff alert prompting them to validate the new member.
+    const staff = await recipientsByRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+    if (staff.length > 0) await send(staff, memberRegistrationAlert(record.user.name, record.user.email));
+  }
 
   return { ok: true };
 }

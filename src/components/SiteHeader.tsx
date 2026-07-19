@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 import { MobileNav } from "./MobileNav";
+import { SocialIconLinks } from "./SocialLinks";
 import { getSession } from "@/lib/session";
+import { loadSiteContent } from "@/lib/content-store";
+import { socialLinks } from "@/lib/social";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -14,8 +17,9 @@ const NAV_LINKS = [
 ];
 
 export async function SiteHeader() {
-  const session = await getSession();
+  const [session, sc] = await Promise.all([getSession(), loadSiteContent()]);
   const isLoggedIn = Boolean(session);
+  const socials = socialLinks(sc);
 
   return (
     <header className="sticky top-0 z-40 border-b border-brand-100 bg-white/90 backdrop-blur">
@@ -35,6 +39,9 @@ export async function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          {/* Hidden below lg so the nav links and CTAs don't wrap on tablets. */}
+          <SocialIconLinks links={socials} className="hidden lg:flex" />
+          {socials.length > 0 && <span className="hidden h-5 w-px bg-brand-100 lg:block" aria-hidden />}
           {isLoggedIn ? (
             <Link
               href="/dashboard"
@@ -60,7 +67,7 @@ export async function SiteHeader() {
           )}
         </div>
 
-        <MobileNav links={NAV_LINKS} isLoggedIn={isLoggedIn} />
+        <MobileNav links={NAV_LINKS} isLoggedIn={isLoggedIn} socials={socials} />
       </div>
     </header>
   );
