@@ -22,6 +22,11 @@ RUN npm ci
 COPY . .
 
 RUN npx prisma generate
+
+# Cap the V8 heap below the build container's memory limit so Node garbage
+# collects instead of growing until the kernel OOM-kills the build (which
+# fails with no error output). Raise if the build host has more headroom.
+ENV NODE_OPTIONS=--max-old-space-size=1024
 RUN npm run build
 
 FROM base AS runner
