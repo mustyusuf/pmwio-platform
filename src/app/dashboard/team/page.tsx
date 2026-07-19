@@ -39,10 +39,11 @@ export default async function TeamPage() {
               {members.map((m, i) => (
                 <li key={m.id} className="rounded-2xl border border-brand-100 p-4">
                   <div className="flex flex-wrap items-start gap-4">
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-brand-100">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-brand-50">
                       {m.storedName ? (
+                        // Matches the public card, so the preview is accurate.
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={`/api/team/${m.id}`} alt={m.name} className="h-full w-full object-cover" />
+                        <img src={`/api/team/${m.id}`} alt={m.name} className="h-full w-full object-contain" />
                       ) : (
                         <div className="grid h-full w-full place-items-center text-lg font-bold text-brand-700/60">
                           {m.name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}

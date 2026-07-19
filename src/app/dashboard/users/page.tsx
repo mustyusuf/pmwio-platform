@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
-import { ROLES } from "@/lib/roles";
+import { ROLES, parseStates } from "@/lib/roles";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, EmptyState, formatDate } from "@/components/dashboard/ui";
 import { CreateUserForm } from "@/components/dashboard/CreateUserForm";
 import { UsersManagementTable } from "@/components/dashboard/UsersManagementTable";
 import { MemberApprovalActions } from "@/components/dashboard/MemberApprovalActions";
+import { ChangeRoleButton } from "@/components/dashboard/ChangeRoleButton";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -29,6 +30,7 @@ export default async function UsersPage() {
     userId: u.userId,
     role: u.role,
     active: u.active,
+    states: parseStates(u.states),
     createdAt: u.createdAt.toISOString(),
   }));
 
@@ -63,7 +65,12 @@ export default async function UsersPage() {
                   <p className="font-medium text-brand-900">{p.name}</p>
                   <p className="text-xs text-brand-900/50">{p.email}{p.country ? ` · ${p.country}` : ""} · registered {formatDate(p.createdAt)}</p>
                 </div>
-                <MemberApprovalActions userId={p.id} name={p.name} />
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Staff who self-registered land here as Members — promoting
+                      them from this list also validates the account. */}
+                  <ChangeRoleButton userId={p.id} name={p.name} currentRole={p.role} currentStates={parseStates(p.states)} />
+                  <MemberApprovalActions userId={p.id} name={p.name} />
+                </div>
               </li>
             ))}
           </ul>

@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { hashPassword, generateReference } from "@/lib/auth";
 import { uniqueUserId } from "@/app/actions/auth";
-import { ROLES } from "@/lib/roles";
+import { ROLES, ROLE_LABEL } from "@/lib/roles";
 import { SCHOLARSHIP_MAX_AWARD } from "@/lib/content";
 import { getSettings, eligibleCount, clampQuorum, tally } from "@/lib/settings";
 import { send, recipientsByRole } from "@/lib/email";
@@ -407,6 +407,69 @@ export async function rejectMember(formData: FormData) {
     await prisma.activityLog.create({ data: { userId: me.id, action: "MEMBER_DECLINED", detail: `${user.name} (${user.email})` } });
   }
   revalidatePath("/dashboard/users");
+}
+
+export type ChangeRoleState = { error?: string; ok?: string } | null;
+
+const changeRoleSchema = z.object({
+  userId: z.string().min(1),
+  role: z.enum([
+    ROLES.EXECUTIVE,
+    ROLES.BOARD,
+    ROLES.ADMIN,
+    ROLES.FINANCE,
+    ROLES.COORDINATOR,
+    ROLES.MEMBER,
+    ROLES.BENEFICIARY,
+  ]),
+});
+
+/** Changes an account's role — e.g. promoting a self-registered member to Executive. */
+export async function changeUserRole(_prev: ChangeRoleState, formData: FormData): Promise<ChangeRoleState> {
+  const me = await requireRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+  const parsed = changeRoleSchema.safeParse({
+    userId: formData.get("userId"),
+    role: formData.get("role"),
+  });
+  if (!parsed.success) return { error: "Choose a valid role." };
+  const { userId, role } = parsed.data;
+
+  // Changing your own role could instantly revoke your access to this page.
+  if (userId === me.id) return { error: "You can't change your own role. Ask another administrator." };
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "That account no longer exists." };
+  if (user.role === role) return { error: `${user.name} is already a ${ROLE_LABEL[role] ?? role}.` };
+
+  // Never leave the system without an administrator.
+  if (user.role === ROLES.ADMIN && role !== ROLES.ADMIN) {
+    const admins = await prisma.user.count({ where: { role: ROLES.ADMIN, active: true } });
+    if (admins <= 1) return { error: "This is the only active administrator. Promote another admin first." };
+  }
+
+  // State Coordinators carry the states they represent; other roles don't.
+  let states: string | null = null;
+  if (role === ROLES.COORDINATOR) {
+    const chosen = formData.getAll("states").map(String).filter(Boolean);
+    if (chosen.length === 0) return { error: "Select at least one state for a State Coordinator." };
+    states = JSON.stringify(chosen);
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    // A promoted account is validated by definition — an administrator chose it.
+    data: { role, states, approved: true },
+  });
+
+  const from = ROLE_LABEL[user.role] ?? user.role;
+  const to = ROLE_LABEL[role] ?? role;
+  await notify(userId, "Your role has changed", `An administrator changed your role from ${from} to ${to}.`);
+  await prisma.activityLog.create({
+    data: { userId: me.id, action: "USER_ROLE_CHANGED", detail: `${user.name} (${user.userId}): ${from} → ${to}` },
+  });
+  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard");
+  return { ok: `${user.name} is now ${to}.` };
 }
 
 export type DeleteUserState = { error?: string; ok?: string } | null;

@@ -104,10 +104,12 @@ export default async function AboutPage() {
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {team.map((m) => (
                 <div key={m.id} className="flex flex-col overflow-hidden rounded-3xl border border-brand-100 bg-white shadow-sm">
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-brand-100">
+                  {/* object-contain (not cover) so portraits and landscape photos
+                      are shown whole rather than cropped to fill the tile. */}
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-brand-50">
                     {m.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.image} alt={m.name} loading="lazy" className="h-full w-full object-cover" />
+                      <img src={m.image} alt={m.name} loading="lazy" className="h-full w-full object-contain" />
                     ) : (
                       <div className="grid h-full w-full place-items-center text-4xl font-extrabold text-brand-700/60">
                         {m.initials}
