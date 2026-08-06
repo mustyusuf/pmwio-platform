@@ -160,22 +160,20 @@ export function verseReference(surahNumber: number, ayahNumber: number): string 
 
 export type VerseText = { arabicText: string; transliteration: string; translation: string };
 
-/** Fetches Arabic text, transliteration and translation for one ayah. */
+// The full Qur'an (Arabic text, transliteration, translation), bundled at
+// build time — see src/data/quran-text.json. Each entry is
+// [surahNumber, ayahNumber, arabicText, transliteration, translation], in
+// canonical order, so its array index is exactly `globalAyahNumber() - 1`.
+// This makes lookups instant and offline: no network call, no dependency on
+// an external API being up, for every verse an admin previews or publishes.
+import quranText from "@/data/quran-text.json";
+type QuranTextRow = [number, number, string, string, string];
+const QURAN_TEXT = quranText as QuranTextRow[];
+
+/** Arabic text, transliteration and translation for one ayah — a local, instant lookup. */
 export async function fetchVerseText(surahNumber: number, ayahNumber: number): Promise<VerseText | null> {
-  const url = `https://api.alquran.cloud/v1/ayah/${surahNumber}:${ayahNumber}/editions/quran-simple,en.transliteration,en.sahih`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const json = await res.json();
-    const editions: { edition: { identifier: string }; text: string }[] = json?.data;
-    if (!Array.isArray(editions) || editions.length !== 3) return null;
-    const byId = new Map(editions.map((e) => [e.edition.identifier, e.text]));
-    const arabicText = byId.get("quran-simple");
-    const transliteration = byId.get("en.transliteration");
-    const translation = byId.get("en.sahih");
-    if (!arabicText || !transliteration || !translation) return null;
-    return { arabicText, transliteration, translation };
-  } catch {
-    return null;
-  }
+  const row = QURAN_TEXT[globalAyahNumber(surahNumber, ayahNumber) - 1];
+  if (!row) return null;
+  const [, , arabicText, transliteration, translation] = row;
+  return { arabicText: arabicText.replace(/^﻿/, ""), transliteration, translation };
 }
