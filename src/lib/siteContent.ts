@@ -146,6 +146,11 @@ export const CONTENT_FIELDS: ContentField[] = [
   { key: "gallery.hero.title", label: "Hero heading", type: "text", section: "Gallery page", default: "Moments from our work." },
   { key: "gallery.hero.subtitle", label: "Hero subtitle", type: "textarea", section: "Gallery page", default: "A glimpse of the lives we touch — filter by program to see more." },
 
+  // ----- Archive page -----
+  { key: "archive.hero.eyebrow", label: "Hero eyebrow", type: "text", section: "Archive page", default: "Archive" },
+  { key: "archive.hero.title", label: "Hero heading", type: "text", section: "Archive page", default: "Past lectures, sermons and events." },
+  { key: "archive.hero.subtitle", label: "Hero subtitle", type: "textarea", section: "Archive page", default: "A record of our lectures, sermons and past events — filter by category to browse." },
+
   // ----- Contact page -----
   { key: "contact.hero.eyebrow", label: "Hero eyebrow", type: "text", section: "Contact page", default: "Contact" },
   { key: "contact.hero.title", label: "Hero heading", type: "text", section: "Contact page", default: "Get in touch." },

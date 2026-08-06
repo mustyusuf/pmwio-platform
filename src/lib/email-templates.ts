@@ -485,6 +485,37 @@ export function contactReceived(name: string): Mail {
   });
 }
 
+// ===========================================================================
+// 6. Qur'an Challenge — monthly recap
+// ===========================================================================
+
+// #33 — all members, broadcast recap of the month's most active reciters
+export function monthlyTopReciters(monthLabel: string, top10: { rank: number; name: string; count: number }[]): Mail {
+  return layout({
+    subject: `Qur'an Challenge — ${monthLabel} top reciters`,
+    heading: `${monthLabel}'s most active reciters`,
+    body: [
+      "Every week we publish a verse for members to recite, record and submit. Here are the members who recited most often this month:",
+    ],
+    facts: top10.map((m) => ({ label: `#${m.rank}`, value: `${m.name} — ${m.count} recitation${m.count === 1 ? "" : "s"}` })),
+    cta: { label: "View the leaderboard", url: DASHBOARD() + "/quran/leaderboard" },
+    footnote: "Keep reciting each week to see your name here next month.",
+  });
+}
+
+// #34 — top-10 member, individual congratulations
+export function monthlyTopReciterCongrats(name: string, monthLabel: string, rank: number, count: number): Mail {
+  return layout({
+    subject: `You're #${rank} in the ${monthLabel} Qur'an Challenge!`,
+    heading: "Congratulations!",
+    intro: `Hi ${firstName(name)},`,
+    body: [
+      `You finished #${rank} of all members for ${monthLabel} with ${count} recitation${count === 1 ? "" : "s"} submitted. Thank you for your consistency and dedication to the weekly Qur'an Challenge.`,
+    ],
+    cta: { label: "View the leaderboard", url: DASHBOARD() + "/quran/leaderboard" },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Escape user-provided text before it lands in a `body` paragraph (which is
 // rendered as raw HTML by layout()). Facts are escaped by layout itself.

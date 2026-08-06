@@ -22,6 +22,11 @@ export function isEmailConfigured(): boolean {
   return Boolean(RESEND_API_KEY);
 }
 
+/** The bare sending address (e.g. "noreply@piousmuslimwomen.org.ng"), for use as `to` on a bcc-only broadcast. */
+export function orgEmailAddress(): string {
+  return EMAIL_FROM.match(/<(.+)>/)?.[1] ?? EMAIL_FROM;
+}
+
 export type Mail = { subject: string; html: string; text: string };
 
 type SendArgs = {
@@ -30,14 +35,17 @@ type SendArgs = {
   html: string;
   text?: string;
   replyTo?: string;
+  /** Hidden recipients — e.g. a broadcast where members shouldn't see each other's addresses. */
+  bcc?: string[];
 };
 
 /** Send one email via Resend. Never throws. */
-export async function sendEmail({ to, subject, html, text, replyTo }: SendArgs): Promise<boolean> {
+export async function sendEmail({ to, subject, html, text, replyTo, bcc }: SendArgs): Promise<boolean> {
   const recipients = (Array.isArray(to) ? to : [to])
     .map((r) => r?.trim())
     .filter((r): r is string => Boolean(r));
   if (recipients.length === 0) return false;
+  const bccRecipients = bcc?.map((r) => r?.trim()).filter((r): r is string => Boolean(r));
 
   if (!RESEND_API_KEY) {
     console.warn(`[email] RESEND_API_KEY not set — skipping "${subject}" to ${recipients.join(", ")}`);
@@ -58,6 +66,7 @@ export async function sendEmail({ to, subject, html, text, replyTo }: SendArgs):
         html,
         text,
         ...(replyTo ?? REPLY_TO ? { reply_to: replyTo ?? REPLY_TO } : {}),
+        ...(bccRecipients?.length ? { bcc: bccRecipients } : {}),
       }),
     });
     if (!res.ok) {

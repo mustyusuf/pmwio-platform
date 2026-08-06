@@ -47,6 +47,9 @@ model User {
   donations                Donation[]
   contributionSubscription ContributionSubscription?
   donationCampaigns        DonationCampaign[]        @relation("CampaignCreator")
+  versesCreated            Verse[]                   @relation("VerseCreator")
+  recitations              Recitation[]
+  archiveItems             ArchiveItem[]              @relation("ArchiveCreator")
 }
 
 /// A beneficiary's request for support. Moves through a multi-stage workflow:
@@ -212,6 +215,9 @@ model Settings {
   // Members always get access once their email is confirmed. This only controls
   // whether admins are queued/emailed to validate them afterwards.
   memberValidationOpen Boolean @default(true)
+  // "YYYY-MM" of the last calendar month the top-10 reciters email was sent
+  // for — guards the monthly job against re-sending on every daily check.
+  lastLeaderboardEmailMonth String?
   updatedAt       DateTime @updatedAt
 }
 
@@ -402,4 +408,70 @@ model SiteContent {
   value     String
   type      String   @default("text") // text | textarea | image
   updatedAt DateTime @updatedAt
+}
+
+/// A weekly Qur'an verse challenge published by an administrator: the
+/// reference recitation audio plus transliteration and translation text.
+/// Members record themselves reciting the same verse (see Recitation).
+/// Arabic text, transliteration and translation are auto-fetched from a
+/// public Qur'an API by surah/ayah (see src/lib/quran-source.ts); the admin
+/// may edit the text before publishing. Audio is downloaded once from that
+/// source and cached in ./uploads like every other file in this app.
+model Verse {
+  id              String    @id @default(cuid())
+  surahNumber     Int
+  ayahNumber      Int
+  reference       String // derived server-side, e.g. "Al-Baqarah 2:255"
+  arabicText      String
+  transliteration String
+  translation     String
+  audioStoredName String // downloaded reference recitation (in ./uploads)
+  audioMimeType   String
+  weekOf          DateTime  @unique // Monday 00:00 of the challenge week
+  publishedAt     DateTime? // null = draft, hidden from members
+  createdById     String
+  createdBy       User      @relation("VerseCreator", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+
+  recitations Recitation[]
+}
+
+/// A member's recorded/uploaded recitation of a given week's Verse. One
+/// submission per member per verse — locked once submitted. The row is kept
+/// forever (it feeds the leaderboard and streaks); the audio file itself is
+/// purged after a retention window and audioStoredName/audioMimeType go
+/// null — see src/lib/recitation-cleanup.ts.
+model Recitation {
+  id              String   @id @default(cuid())
+  verseId         String
+  verse           Verse    @relation(fields: [verseId], references: [id])
+  memberId        String
+  member          User     @relation(fields: [memberId], references: [id])
+  audioStoredName String?
+  audioMimeType   String?
+  audioSize       Int
+  submittedAt     DateTime @default(now())
+
+  @@unique([verseId, memberId])
+}
+
+/// A public archive entry — a past lecture, sermon or event. Video is
+/// link-only (YouTube/Vimeo/Facebook, embedded where possible) to avoid
+/// self-hosting large files; audio may be a link or a small uploaded file
+/// (same ./uploads pattern and size cap as Qur'an recitations).
+model ArchiveItem {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  category    String // LECTURE | SERMON | EVENT | OTHER
+  mediaType   String // VIDEO_LINK | AUDIO_LINK | AUDIO_FILE
+  url         String? // external link (VIDEO_LINK / AUDIO_LINK)
+  storedName  String? // uploaded audio (AUDIO_FILE only, in ./uploads)
+  mimeType    String?
+  size        Int?
+  eventDate   DateTime? // when the original event/lecture happened
+  publishedAt DateTime? // null = draft, hidden from the public
+  createdById String
+  createdBy   User      @relation("ArchiveCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
 }

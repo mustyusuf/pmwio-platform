@@ -16,7 +16,10 @@ export type NavIcon =
   | "settings"
   | "file-plus"
   | "pencil"
-  | "bell";
+  | "bell"
+  | "mic"
+  | "trophy"
+  | "archive";
 export type NavItem = { label: string; href: string; icon: NavIcon; children?: NavChild[]; disabled?: boolean; badge?: string };
 
 const PROFILE_ITEM: NavItem = { label: "My Profile", href: "/dashboard/profile", icon: "user" };
@@ -40,6 +43,8 @@ function memberNav(empowermentOpen: boolean): NavItem[] {
       badge: empowermentOpen ? "Open" : "Closed",
     },
     { label: "Monthly Contributions", href: "/dashboard/contributions", icon: "wallet" },
+    { label: "Qur'an Challenge", href: "/dashboard/quran", icon: "mic" },
+    { label: "Leaderboard", href: "/dashboard/quran/leaderboard", icon: "trophy" },
     { label: "Notifications", href: "/dashboard/notifications", icon: "bell" },
     PROFILE_ITEM,
   ];
@@ -94,7 +99,10 @@ export function navForRole(role: string, opts: { empowermentOpen?: boolean } = {
       { label: "Users", href: "/dashboard/users", icon: "user-cog" },
       { label: "Form Builder", href: "/dashboard/form-fields", icon: "file-plus" },
       { label: "Gallery", href: "/dashboard/gallery", icon: "image" },
+      { label: "Archive", href: "/dashboard/archive", icon: "archive" },
       { label: "Management Team", href: "/dashboard/team", icon: "users" },
+      { label: "Weekly Verse", href: "/dashboard/quran-admin", icon: "mic" },
+      { label: "Qur'an Leaderboard", href: "/dashboard/quran/leaderboard", icon: "trophy" },
       { label: "Site Content", href: "/dashboard/content", icon: "pencil" },
       { label: "Settings", href: "/dashboard/settings", icon: "settings" },
     );

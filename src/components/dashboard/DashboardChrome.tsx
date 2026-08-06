@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
+  Archive,
   Bell,
   FilePlus2,
   FileText,
@@ -14,9 +15,11 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  Mic,
   Pencil,
   Settings,
   Sprout,
+  Trophy,
   User,
   UserCog,
   Users,
@@ -43,6 +46,9 @@ const SIDEBAR_ICONS = {
   "file-plus": FilePlus2,
   pencil: Pencil,
   bell: Bell,
+  mic: Mic,
+  trophy: Trophy,
+  archive: Archive,
 } satisfies Record<NavIcon, typeof House>;
 
 function Icon({ name }: { name: NavIcon }) {
