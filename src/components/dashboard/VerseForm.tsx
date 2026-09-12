@@ -91,7 +91,7 @@ export function VerseCreateForm() {
       <Feedback state={state} />
       <div>
         <p className={label}>{preview.reference}</p>
-        <p dir="rtl" lang="ar" className="mt-1.5 rounded-lg border border-brand-200 bg-brand-50/40 px-3 py-3 text-right text-xl leading-relaxed text-brand-950">
+        <p dir="rtl" lang="ar" className="font-arabic mt-1.5 rounded-lg border border-brand-200 bg-brand-50/40 px-3 py-3 text-right text-xl leading-relaxed text-brand-950">
           {preview.arabicText}
         </p>
       </div>
@@ -110,8 +110,12 @@ export function VerseCreateForm() {
       </div>
       <label className="flex items-center gap-2 text-sm text-brand-900">
         <input type="checkbox" name="publish" value="true" defaultChecked className="rounded border-brand-300" />
-        Publish immediately (members can see and submit for it right away)
+        Approve this verse
       </label>
+      <p className="-mt-2 text-xs text-brand-900/50">
+        Members see it automatically once its challenge week begins — you can schedule several verses ahead of time,
+        each for a different week, and approve them all now.
+      </p>
       <div className="flex gap-2">
         <button
           disabled={isPending}

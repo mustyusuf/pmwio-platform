@@ -440,11 +440,13 @@ model Verse {
 /// submission per member per verse — locked once submitted. The row is kept
 /// forever (it feeds the leaderboard and streaks); the audio file itself is
 /// purged after a retention window and audioStoredName/audioMimeType go
-/// null — see src/lib/recitation-cleanup.ts.
+/// null — see src/lib/recitation-cleanup.ts. Deleting the parent Verse
+/// deletes its Recitations too (admin-initiated, deliberately destructive —
+/// see deleteVerse in src/app/actions/quran.ts).
 model Recitation {
   id              String   @id @default(cuid())
   verseId         String
-  verse           Verse    @relation(fields: [verseId], references: [id])
+  verse           Verse    @relation(fields: [verseId], references: [id], onDelete: Cascade)
   memberId        String
   member          User     @relation(fields: [memberId], references: [id])
   audioStoredName String?

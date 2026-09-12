@@ -35,7 +35,10 @@ export async function getAllTimeLeaderboard(limit = 50) {
 
 async function weeklyStreakCounts() {
   const verses = await prisma.verse.findMany({
-    where: { publishedAt: { lte: new Date() } },
+    // Only weeks that have actually begun count toward the streak — a
+    // verse scheduled for a future week (approved ahead of time) must not
+    // look like a "missed week" yet.
+    where: { publishedAt: { not: null }, weekOf: { lte: new Date() } },
     orderBy: { weekOf: "desc" },
     select: { id: true },
   });

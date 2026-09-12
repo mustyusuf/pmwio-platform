@@ -2,6 +2,10 @@
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Qur'an verse text (Arabic script) — see layout.tsx. Applied via the
+     `font-arabic` utility instead of relying on each OS's default Arabic
+     font, which differs visibly between desktop and mobile. */
+  --font-arabic: var(--font-amiri), "Traditional Arabic", serif;
 
   /* Brand palette — forest & deep green (from the logo), crimson accent,
      light ash backgrounds. */

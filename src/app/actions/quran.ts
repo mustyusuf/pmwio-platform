@@ -140,15 +140,18 @@ export async function togglePublishVerse(formData: FormData) {
 export async function deleteVerse(formData: FormData) {
   const me = await requireAdmin();
   const id = String(formData.get("id"));
-  // The admin UI only offers this action when there are no recitations yet
-  // (removing a verse members have already submitted for would wipe their
-  // leaderboard history) — this is defense-in-depth against a stale page.
+  // Deliberately allowed even when members have submitted recitations for
+  // this verse — the DB cascade (see schema.prisma) removes those
+  // Recitation rows too, which lowers the affected members' leaderboard
+  // counts/streaks. The admin UI warns about this before submitting.
   const recitationCount = await prisma.recitation.count({ where: { verseId: id } });
-  if (recitationCount > 0) return;
-
   const verse = await prisma.verse.delete({ where: { id } });
   await prisma.activityLog.create({
-    data: { userId: me.id, action: "VERSE_REMOVED", detail: verse.reference },
+    data: {
+      userId: me.id,
+      action: "VERSE_REMOVED",
+      detail: recitationCount > 0 ? `${verse.reference} (${recitationCount} recitation${recitationCount === 1 ? "" : "s"} removed)` : verse.reference,
+    },
   });
   revalidateQuran();
 }
@@ -157,7 +160,7 @@ export async function submitRecitation(_prev: RecitationState, formData: FormDat
   const me = await requireMember();
   const verseId = String(formData.get("verseId") ?? "");
   const verse = await prisma.verse.findUnique({ where: { id: verseId } });
-  if (!verse || !verse.publishedAt) return { error: "That verse isn't open for submissions." };
+  if (!verse || !verse.publishedAt || verse.weekOf > new Date()) return { error: "That verse isn't open for submissions." };
 
   const file = formData.get("audio");
   if (!(file instanceof File) || file.size === 0) return { error: "Record or upload your recitation first." };

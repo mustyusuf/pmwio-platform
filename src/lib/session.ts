@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/db";
 
@@ -11,6 +11,21 @@ function getSecret(): Uint8Array {
     throw new Error("SESSION_SECRET is not set. Add it to your .env file.");
   }
   return new TextEncoder().encode(secret);
+}
+
+/**
+ * Whether this request actually reached us over HTTPS. Checked via the
+ * standard reverse-proxy header (set by every real deployment — Vercel,
+ * Railway, Nginx, etc. terminate TLS and forward this) rather than
+ * NODE_ENV, so a `Secure` cookie is only ever requested when the browser
+ * will actually accept it. Using NODE_ENV alone broke session persistence
+ * for anyone testing a production build over plain HTTP — e.g. opening the
+ * site from a phone via the host machine's LAN IP, which browsers never
+ * treat as a secure context the way they special-case "localhost".
+ */
+async function isHttps(): Promise<boolean> {
+  const h = await headers();
+  return h.get("x-forwarded-proto") === "https";
 }
 
 export type SessionPayload = {
@@ -31,7 +46,7 @@ export async function createSession(payload: SessionPayload): Promise<void> {
   const store = await cookies();
   store.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: await isHttps(),
     sameSite: "lax",
     path: "/",
     maxAge: MAX_AGE,

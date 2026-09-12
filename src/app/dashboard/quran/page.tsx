@@ -18,7 +18,10 @@ export default async function QuranChallengePage() {
 
   const [verse, standing] = await Promise.all([
     prisma.verse.findFirst({
-      where: { publishedAt: { lte: new Date() } },
+      // Admins may schedule several verses in advance — only one whose week
+      // has actually begun should ever show as "this week's verse", even if
+      // a later one was approved (published) first.
+      where: { publishedAt: { not: null }, weekOf: { lte: new Date() } },
       orderBy: { weekOf: "desc" },
     }),
     getMemberStanding(user.id),
@@ -52,7 +55,7 @@ export default async function QuranChallengePage() {
             <EmptyState>No verse has been published yet — check back soon.</EmptyState>
           ) : (
             <div className="space-y-4">
-              <p dir="rtl" lang="ar" className="text-right text-2xl leading-relaxed text-brand-950">
+              <p dir="rtl" lang="ar" className="font-arabic text-right text-2xl leading-relaxed text-brand-950">
                 {verse.arabicText}
               </p>
               <audio controls src={`/api/verses/${verse.id}/audio`} className="w-full" />

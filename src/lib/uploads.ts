@@ -1,4 +1,6 @@
-import { writeFile, mkdir, readFile, unlink } from "node:fs/promises";
+import { writeFile, mkdir, readFile, unlink, stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -73,6 +75,48 @@ export async function downloadAudio(url: string): Promise<SaveResult> {
 export async function readUpload(storedName: string): Promise<Buffer> {
   const safe = path.basename(storedName);
   return readFile(path.join(UPLOAD_DIR, safe));
+}
+
+/**
+ * Serves a stored file as an HTTP response, honoring a Range request if the
+ * client sent one. iOS Safari specifically requires this for <audio>/<video>
+ * playback — without Range + Accept-Ranges support it can't determine the
+ * file's duration and treats it as an unseekable "Live Broadcast" instead of
+ * a normal clip, which on some iOS versions fails to play at all.
+ */
+export async function serveUpload(req: Request, storedName: string, mimeType: string, cacheControl: string): Promise<Response> {
+  const safe = path.basename(storedName);
+  const filePath = path.join(UPLOAD_DIR, safe);
+  const stats = await stat(filePath);
+
+  const rangeHeader = req.headers.get("range");
+  const match = rangeHeader ? /bytes=(\d*)-(\d*)/.exec(rangeHeader) : null;
+
+  if (match) {
+    const start = match[1] ? parseInt(match[1], 10) : 0;
+    const end = match[2] ? Math.min(parseInt(match[2], 10), stats.size - 1) : stats.size - 1;
+    const body = Readable.toWeb(createReadStream(filePath, { start, end })) as ReadableStream;
+    return new Response(body, {
+      status: 206,
+      headers: {
+        "Content-Type": mimeType,
+        "Content-Range": `bytes ${start}-${end}/${stats.size}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": String(end - start + 1),
+        "Cache-Control": cacheControl,
+      },
+    });
+  }
+
+  const body = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
+  return new Response(body, {
+    headers: {
+      "Content-Type": mimeType,
+      "Content-Length": String(stats.size),
+      "Accept-Ranges": "bytes",
+      "Cache-Control": cacheControl,
+    },
+  });
 }
 
 /** Deletes a stored file by name (path-traversal safe). Never throws. */

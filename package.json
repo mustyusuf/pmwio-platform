@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:https": "next dev --experimental-https -H 192.168.0.23",
     "build": "next build",
     "prestart": "next build",
     "start": "next start",
