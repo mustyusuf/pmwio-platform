@@ -27,9 +27,30 @@ export function ArchiveCreateForm() {
         <label className={label} htmlFor="title">Title</label>
         <input id="title" name="title" required className={input} placeholder="e.g. Ramadan lecture series — Night 1" />
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={label} htmlFor="topic">Topic (optional)</label>
+          <input id="topic" name="topic" className={input} placeholder="e.g. Patience in Times of Trial" />
+        </div>
+        <div>
+          <label className={label} htmlFor="lecturer">Lecturer / Speaker (optional)</label>
+          <input id="lecturer" name="lecturer" className={input} placeholder="e.g. Sheikh Abdullah Bello" />
+        </div>
+      </div>
       <div>
         <label className={label} htmlFor="description">Description (optional)</label>
         <textarea id="description" name="description" rows={2} maxLength={1000} className={input} />
+      </div>
+      <div>
+        <label className={label} htmlFor="image">Feature image (optional)</label>
+        <input
+          id="image"
+          name="image"
+          type="file"
+          accept="image/*"
+          className={`${input} file:mr-3 file:rounded-md file:border-0 file:bg-brand-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-800`}
+        />
+        <p className="mt-1 text-xs text-brand-900/50">JPG, PNG, GIF or WEBP — shown as the card&apos;s cover image.</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>

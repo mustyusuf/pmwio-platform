@@ -43,6 +43,10 @@ export function ArchiveSection({ items }: { items: ArchiveItemDTO[] }) {
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {shown.map((item) => (
               <div key={item.id} className="overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm">
+                {item.imageSrc && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.imageSrc} alt="" className="aspect-video w-full object-cover" />
+                )}
                 {item.mediaType === "AUDIO_FILE" ? (
                   <div className="bg-brand-50 p-4">
                     <audio controls src={item.audioSrc ?? undefined} className="w-full" />
@@ -64,7 +68,13 @@ export function ArchiveSection({ items }: { items: ArchiveItemDTO[] }) {
                 <div className="p-4">
                   <span className="text-xs font-semibold uppercase tracking-wider text-brand-600">{CATEGORY_LABEL[item.category] ?? item.category}</span>
                   <h3 className="mt-1 font-bold text-brand-950">{item.title}</h3>
-                  {formatDate(item.eventDate) && <p className="mt-0.5 text-xs text-brand-900/50">{formatDate(item.eventDate)}</p>}
+                  {item.topic && <p className="mt-0.5 text-sm font-medium text-brand-800">{item.topic}</p>}
+                  {item.lecturer && <p className="mt-0.5 text-xs text-brand-900/50">{item.lecturer}</p>}
+                  {formatDate(item.eventDate) && (
+                    <span className="mt-1.5 inline-block rounded-full bg-crimson-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                      {formatDate(item.eventDate)}
+                    </span>
+                  )}
                   {item.description && <p className="mt-2 text-sm text-brand-900/70">{item.description}</p>}
                 </div>
               </div>

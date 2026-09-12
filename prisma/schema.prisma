@@ -462,18 +462,22 @@ model Recitation {
 /// self-hosting large files; audio may be a link or a small uploaded file
 /// (same ./uploads pattern and size cap as Qur'an recitations).
 model ArchiveItem {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  category    String // LECTURE | SERMON | EVENT | OTHER
-  mediaType   String // VIDEO_LINK | AUDIO_LINK | AUDIO_FILE
-  url         String? // external link (VIDEO_LINK / AUDIO_LINK)
-  storedName  String? // uploaded audio (AUDIO_FILE only, in ./uploads)
-  mimeType    String?
-  size        Int?
-  eventDate   DateTime? // when the original event/lecture happened
-  publishedAt DateTime? // null = draft, hidden from the public
-  createdById String
-  createdBy   User      @relation("ArchiveCreator", fields: [createdById], references: [id])
-  createdAt   DateTime  @default(now())
+  id              String    @id @default(cuid())
+  title           String
+  topic           String? // the subject of the talk, e.g. "Patience in Times of Trial"
+  lecturer        String? // speaker/lecturer name (and title, if the admin includes it)
+  description     String?
+  category        String // LECTURE | SERMON | EVENT | OTHER
+  mediaType       String // VIDEO_LINK | AUDIO_LINK | AUDIO_FILE
+  url             String? // external link (VIDEO_LINK / AUDIO_LINK)
+  storedName      String? // uploaded audio (AUDIO_FILE only, in ./uploads)
+  mimeType        String?
+  size            Int?
+  imageStoredName String? // optional feature/cover image (in ./uploads)
+  imageMimeType   String?
+  eventDate       DateTime? // when the original event/lecture happened
+  publishedAt     DateTime? // null = draft, hidden from the public
+  createdById     String
+  createdBy       User      @relation("ArchiveCreator", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
 }

@@ -14,12 +14,15 @@ export async function getArchiveData(): Promise<ArchiveItemDTO[]> {
   return items.map((item) => ({
     id: item.id,
     title: item.title,
+    topic: item.topic,
+    lecturer: item.lecturer,
     description: item.description,
     category: item.category,
     mediaType: item.mediaType,
     url: item.url,
     audioSrc: item.mediaType === "AUDIO_FILE" ? `/api/archive/${item.id}/audio` : null,
     embedUrl: item.mediaType === "VIDEO_LINK" && item.url ? parseVideoEmbed(item.url).embedUrl : null,
+    imageSrc: item.imageStoredName ? `/api/archive/${item.id}/image` : null,
     eventDate: item.eventDate ? item.eventDate.toISOString() : null,
   }));
 }

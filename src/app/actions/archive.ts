@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
-import { saveAudioUpload } from "@/lib/uploads";
+import { saveAudioUpload, saveUpload } from "@/lib/uploads";
 
 export type ArchiveState = { ok?: boolean; error?: string } | null;
 
@@ -27,6 +27,8 @@ const MEDIA_TYPE = z.enum(["VIDEO_LINK", "AUDIO_LINK", "AUDIO_FILE"], { message:
 
 const schema = z.object({
   title: z.string().trim().min(2, "Enter a title."),
+  topic: z.string().trim().max(200, "Keep the topic under 200 characters.").optional(),
+  lecturer: z.string().trim().max(200, "Keep the lecturer name under 200 characters.").optional(),
   description: z.string().trim().max(1000, "Keep the description under 1000 characters.").optional(),
   category: CATEGORY,
   mediaType: MEDIA_TYPE,
@@ -37,6 +39,8 @@ export async function createArchiveItem(_prev: ArchiveState, formData: FormData)
   const me = await requireAdmin();
   const parsed = schema.safeParse({
     title: formData.get("title"),
+    topic: formData.get("topic") || undefined,
+    lecturer: formData.get("lecturer") || undefined,
     description: formData.get("description") || undefined,
     category: formData.get("category"),
     mediaType: formData.get("mediaType"),
@@ -71,9 +75,21 @@ export async function createArchiveItem(_prev: ArchiveState, formData: FormData)
     size = res.file.size;
   }
 
+  let imageStoredName: string | null = null;
+  let imageMimeType: string | null = null;
+  const image = formData.get("image");
+  if (image instanceof File && image.size > 0) {
+    const res = await saveUpload(image, { imagesOnly: true });
+    if (!res.ok) return { error: res.error };
+    imageStoredName = res.file.storedName;
+    imageMimeType = res.file.mimeType;
+  }
+
   await prisma.archiveItem.create({
     data: {
       title: parsed.data.title,
+      topic: parsed.data.topic || null,
+      lecturer: parsed.data.lecturer || null,
       description: parsed.data.description || null,
       category: parsed.data.category,
       mediaType: parsed.data.mediaType,
@@ -81,6 +97,8 @@ export async function createArchiveItem(_prev: ArchiveState, formData: FormData)
       storedName,
       mimeType,
       size,
+      imageStoredName,
+      imageMimeType,
       eventDate,
       createdById: me.id,
       publishedAt: formData.get("publish") === "true" ? new Date() : null,

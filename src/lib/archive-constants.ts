@@ -18,11 +18,14 @@ export const MEDIA_TYPE_LABEL: Record<string, string> = {
 export type ArchiveItemDTO = {
   id: string;
   title: string;
+  topic: string | null;
+  lecturer: string | null;
   description: string | null;
   category: string;
   mediaType: string;
   url: string | null;
   audioSrc: string | null; // /api/archive/[id]/audio, for AUDIO_FILE items
   embedUrl: string | null; // resolved iframe URL for a recognized video link
+  imageSrc: string | null; // /api/archive/[id]/image, if a feature image was uploaded
   eventDate: string | null; // ISO date, formatted in the UI
 };
