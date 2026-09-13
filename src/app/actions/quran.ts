@@ -9,6 +9,10 @@ import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
 import { saveAudioUpload, downloadAudio } from "@/lib/uploads";
 import { getSurah, audioUrl, verseReference, fetchVerseText } from "@/lib/quran-source";
+import { getMemberStanding } from "@/lib/leaderboard";
+import { notifyMembersOfLiveVerse } from "@/lib/verse-notify";
+import { send } from "@/lib/email";
+import { recitationReceived } from "@/lib/email-templates";
 
 export type VerseState = { ok?: boolean; error?: string } | null;
 export type RecitationState = { ok?: boolean; error?: string } | null;
@@ -119,6 +123,9 @@ export async function createVerse(_prev: VerseState, formData: FormData): Promis
   await prisma.activityLog.create({
     data: { userId: me.id, action: "VERSE_ADDED", detail: reference },
   });
+  // Announces immediately if this verse is live now; scheduled verses are
+  // picked up by the hourly job when their week begins.
+  await notifyMembersOfLiveVerse();
   revalidateQuran();
   return { ok: true };
 }
@@ -134,6 +141,7 @@ export async function togglePublishVerse(formData: FormData) {
   await prisma.activityLog.create({
     data: { userId: me.id, action: publish ? "VERSE_PUBLISHED" : "VERSE_UNPUBLISHED", detail: verse.reference },
   });
+  if (publish) await notifyMembersOfLiveVerse();
   revalidateQuran();
 }
 
@@ -183,6 +191,37 @@ export async function submitRecitation(_prev: RecitationState, formData: FormDat
     }
     throw e;
   }
+
+  await prisma.activityLog.create({
+    data: { userId: me.id, action: "RECITATION_SUBMITTED", detail: verse.reference },
+  });
+
+  const standing = await getMemberStanding(me.id);
+  await prisma.notification.create({
+    data: {
+      userId: me.id,
+      title: "Recitation received",
+      body: `Your recitation of ${verse.reference} has been recorded. Total: ${standing.allTimeCount} · streak: ${standing.streak} week${standing.streak === 1 ? "" : "s"}.`,
+    },
+  });
+  // Email #36 — confirmation to the member.
+  await send(me.email, recitationReceived(me.name, verse.reference, standing.allTimeCount, standing.streak));
+
+  // In-app heads-up for admins/executives (no email — one per member per week would be noise).
+  const admins = await prisma.user.findMany({
+    where: { active: true, role: { in: [ROLES.ADMIN, ROLES.EXECUTIVE] } },
+    select: { id: true },
+  });
+  if (admins.length > 0) {
+    await prisma.notification.createMany({
+      data: admins.map((a) => ({
+        userId: a.id,
+        title: "New recitation submitted",
+        body: `${me.name} submitted a recitation of ${verse.reference}.`,
+      })),
+    });
+  }
+
   revalidateQuran();
   return { ok: true };
 }

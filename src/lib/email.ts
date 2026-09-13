@@ -1,30 +1,56 @@
 
+import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/db";
 import { appUrl } from "@/lib/paystack";
 
 // ---------------------------------------------------------------------------
-// Transactional email (Resend) for Pious Muslim Women International Organization.
+// Transactional email over SMTP (the organization's cPanel mailbox) for Pious
+// Muslim Women International Organization.
 //
 // Every email is best-effort: a failed or unconfigured send must NEVER break
 // the user action that triggered it. sendEmail() therefore swallows all errors
-// (logging them) and returns quietly when RESEND_API_KEY is not set.
+// (logging them) and returns quietly when SMTP is not configured.
 // ---------------------------------------------------------------------------
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-// A verified sender on the organization's Resend domain. Override with EMAIL_FROM
-// (e.g. to fall back to Resend's shared "onboarding@resend.dev" before the domain
-// has finished DNS verification).
-const EMAIL_FROM = process.env.EMAIL_FROM ?? "PMWIO <noreply@piousmuslimwomen.org.ng>";
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = Number(process.env.SMTP_PORT ?? 465);
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+// Implicit TLS on 465 (cPanel's recommended setting); STARTTLS otherwise.
+const SMTP_SECURE = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : SMTP_PORT === 465;
+// The From header. Shared hosts reject mail whose From address doesn't belong
+// to the authenticated mailbox, so this should be SMTP_USER (or an alias of it).
+const EMAIL_FROM = process.env.EMAIL_FROM ?? (SMTP_USER ? `PMWIO <${SMTP_USER}>` : "PMWIO <noreply@piousmuslimwomen.org.ng>");
 const REPLY_TO = process.env.EMAIL_REPLY_TO;
+// Broadcasts (bcc) go out in batches this size — shared hosts cap recipients
+// per message, and a single rejected batch shouldn't take the whole send down.
+const BCC_BATCH_SIZE = Math.max(1, Number(process.env.EMAIL_BCC_BATCH_SIZE ?? 50));
 
-/** Whether transactional email is configured (an API key is present). */
+/** Whether transactional email is configured (SMTP credentials are present). */
 export function isEmailConfigured(): boolean {
-  return Boolean(RESEND_API_KEY);
+  return Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
 }
 
-/** The bare sending address (e.g. "noreply@piousmuslimwomen.org.ng"), for use as `to` on a bcc-only broadcast. */
+/** The bare sending address (e.g. "admin@piousmuslimwomen.org.ng"), for use as `to` on a bcc-only broadcast. */
 export function orgEmailAddress(): string {
   return EMAIL_FROM.match(/<(.+)>/)?.[1] ?? EMAIL_FROM;
+}
+
+// One pooled connection per process: broadcasts send many messages back to
+// back, and re-handshaking TLS for each is what makes SMTP slow.
+const globalForMail = globalThis as unknown as { smtpTransport?: Transporter };
+function transport(): Transporter {
+  if (!globalForMail.smtpTransport) {
+    globalForMail.smtpTransport = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+      pool: true,
+      maxConnections: 2,
+    });
+  }
+  return globalForMail.smtpTransport;
 }
 
 export type Mail = { subject: string; html: string; text: string };
@@ -39,45 +65,41 @@ type SendArgs = {
   bcc?: string[];
 };
 
-/** Send one email via Resend. Never throws. */
+/** Send one email over SMTP (bcc lists are split into batches). Never throws. */
 export async function sendEmail({ to, subject, html, text, replyTo, bcc }: SendArgs): Promise<boolean> {
   const recipients = (Array.isArray(to) ? to : [to])
     .map((r) => r?.trim())
     .filter((r): r is string => Boolean(r));
   if (recipients.length === 0) return false;
-  const bccRecipients = bcc?.map((r) => r?.trim()).filter((r): r is string => Boolean(r));
+  const bccRecipients = bcc?.map((r) => r?.trim()).filter((r): r is string => Boolean(r)) ?? [];
 
-  if (!RESEND_API_KEY) {
-    console.warn(`[email] RESEND_API_KEY not set — skipping "${subject}" to ${recipients.join(", ")}`);
+  if (!isEmailConfigured()) {
+    console.warn(`[email] SMTP not configured — skipping "${subject}" to ${recipients.join(", ")}`);
     return false;
   }
 
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+  const batches: (string[] | undefined)[] = [];
+  if (bccRecipients.length === 0) batches.push(undefined);
+  for (let i = 0; i < bccRecipients.length; i += BCC_BATCH_SIZE) batches.push(bccRecipients.slice(i, i + BCC_BATCH_SIZE));
+
+  let ok = true;
+  for (const batch of batches) {
+    try {
+      await transport().sendMail({
         from: EMAIL_FROM,
         to: recipients,
         subject,
         html,
         text,
-        ...(replyTo ?? REPLY_TO ? { reply_to: replyTo ?? REPLY_TO } : {}),
-        ...(bccRecipients?.length ? { bcc: bccRecipients } : {}),
-      }),
-    });
-    if (!res.ok) {
-      console.error(`[email] send failed (${res.status}): ${await res.text()}`);
-      return false;
+        ...(replyTo ?? REPLY_TO ? { replyTo: replyTo ?? REPLY_TO } : {}),
+        ...(batch?.length ? { bcc: batch } : {}),
+      });
+    } catch (err) {
+      console.error(`[email] send failed for "${subject}":`, err);
+      ok = false;
     }
-    return true;
-  } catch (err) {
-    console.error("[email] send threw:", err);
-    return false;
   }
+  return ok;
 }
 
 /** Convenience: send a prepared template to one or more addresses. */

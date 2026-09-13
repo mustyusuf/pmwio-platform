@@ -516,6 +516,41 @@ export function monthlyTopReciterCongrats(name: string, monthLabel: string, rank
   });
 }
 
+// ===========================================================================
+// 7. Qur'an Challenge — weekly verse & submissions
+// ===========================================================================
+
+// #35 — all members, broadcast when the week's verse goes live
+export function weeklyVerseLive(reference: string, translation: string): Mail {
+  return layout({
+    subject: `This week's Qur'an Challenge — ${reference}`,
+    heading: `This week's verse is ${reference}`,
+    body: [
+      "A new verse is open for recitation. Listen to the reference recitation, then record or upload your own before the week ends to keep your streak going.",
+      `<em>${escapeText(translation)}</em>`,
+    ],
+    cta: { label: "Recite this week's verse", url: DASHBOARD() + "/quran" },
+    footnote: "One submission per member per week — it's locked once submitted, so take your time.",
+  });
+}
+
+// #36 — member, confirmation that their recitation was received
+export function recitationReceived(name: string, reference: string, totalCount: number, streak: number): Mail {
+  return layout({
+    subject: `Recitation received — ${reference}`,
+    heading: "Your recitation has been received",
+    intro: `Hi ${firstName(name)},`,
+    body: [
+      `Thank you for submitting your recitation of <strong>${escapeText(reference)}</strong>. It has been recorded towards this week's Qur'an Challenge.`,
+    ],
+    facts: [
+      { label: "Total recitations", value: String(totalCount) },
+      { label: "Current streak", value: `${streak} week${streak === 1 ? "" : "s"}` },
+    ],
+    cta: { label: "View the leaderboard", url: DASHBOARD() + "/quran/leaderboard" },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Escape user-provided text before it lands in a `body` paragraph (which is
 // rendered as raw HTML by layout()). Facts are escaped by layout itself.

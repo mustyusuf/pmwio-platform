@@ -429,6 +429,10 @@ model Verse {
   audioMimeType   String
   weekOf          DateTime  @unique // Monday 00:00 of the challenge week
   publishedAt     DateTime? // null = draft, hidden from members
+  // When members were told this verse is live (in-app + email). Set once the
+  // verse is published AND its week has begun — see src/lib/verse-notify.ts.
+  // Never reset, so unpublish/republish doesn't re-notify.
+  notifiedAt      DateTime?
   createdById     String
   createdBy       User      @relation("VerseCreator", fields: [createdById], references: [id])
   createdAt       DateTime  @default(now())

@@ -281,7 +281,8 @@ The app is a standard Next.js project and deploys to any Node host.
 
 ## 12. Known limitations & roadmap
 
-- **Email/SMS:** in-app notifications are implemented; outbound email/SMS (e.g. password-reset links, status updates) is not yet wired up. The reset flow currently surfaces the link in-app for demo purposes.
+- **Email:** transactional email goes out over SMTP through the organization's cPanel mailbox (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`, see `.env.example`). Broadcasts to members are sent bcc in batches of `EMAIL_BCC_BATCH_SIZE` (default 50). Without SMTP credentials, emails are logged and skipped and the app keeps working. Note that shared cPanel hosts enforce an hourly outbound cap (commonly 200–500/hour) — check "Email Deliverability"/hosting limits if a broadcast to all members is partially delivered.
+- **SMS:** not wired up.
 - **Contact inbox:** contact-form messages are recorded to the audit log and pushed as admin notifications; a dedicated managed inbox could be added.
 - **Reports export:** "Generate reports" permissions exist; CSV/PDF export is a natural next step.
 - **Configurable workflows:** the approval pipeline is fixed in code (quorums are configurable); a visual workflow builder is a future enhancement.
