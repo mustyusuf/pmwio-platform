@@ -46,6 +46,9 @@ export default async function ProgramsPage() {
                   ) : (
                     <Link href={`/apply?program=${p.key}`} className="mt-5 inline-flex rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800">Apply for {p.title}</Link>
                   )}
+                  {p.key === "ORPHANAGE" && (
+                    <Link href="/orphanage" className="mt-3 block text-sm font-semibold text-brand-700 hover:text-brand-900">Sponsor an orphan (Kafala) →</Link>
+                  )}
                 </div>
                 <div className="space-y-5">
                   <div>

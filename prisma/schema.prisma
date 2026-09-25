@@ -401,6 +401,23 @@ model TeamMember {
   updatedAt  DateTime @updatedAt
 }
 
+/// A partner organization or notable supporter shown on the public Orphanage
+/// page, maintained by an administrator. `kind` selects which of the two
+/// public groups a logo appears under: organizations PMWIO partners with on
+/// programs, versus organizations/donors who fund or supply the work.
+model Partner {
+  id         String   @id @default(cuid())
+  name       String
+  url        String? // optional link to the partner/supporter's website
+  kind       String   @default("PARTNER") // PARTNER | SUPPORTER
+  storedName String? // uploaded logo (filename in ./uploads)
+  mimeType   String?
+  order      Int      @default(0)
+  active     Boolean  @default(true) // inactive entries are hidden from the public page
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 /// Editable public-site content (CMS). Keyed by a stable identifier; `value`
 /// holds text, or (for type "image") the uploaded filename in ./uploads.
 model SiteContent {
@@ -418,24 +435,26 @@ model SiteContent {
 /// may edit the text before publishing. Audio is downloaded once from that
 /// source and cached in ./uploads like every other file in this app.
 model Verse {
-  id              String    @id @default(cuid())
-  surahNumber     Int
-  ayahNumber      Int
-  reference       String // derived server-side, e.g. "Al-Baqarah 2:255"
-  arabicText      String
-  transliteration String
-  translation     String
-  audioStoredName String // downloaded reference recitation (in ./uploads)
-  audioMimeType   String
-  weekOf          DateTime  @unique // Monday 00:00 of the challenge week
-  publishedAt     DateTime? // null = draft, hidden from members
+  id                 String    @id @default(cuid())
+  surahNumber        Int
+  ayahNumber         Int
+  reference          String // derived server-side, e.g. "Al-Baqarah 2:255"
+  arabicText         String
+  transliteration    String
+  translation        String
+  audioStoredName    String // downloaded reference recitation (in ./uploads)
+  audioMimeType      String
+  weekOf             DateTime  @unique // Monday 00:00 of the challenge week
+  publishedAt        DateTime? // null = draft, hidden from members
   // When members were told this verse is live (in-app + email). Set once the
   // verse is published AND its week has begun — see src/lib/verse-notify.ts.
   // Never reset, so unpublish/republish doesn't re-notify.
-  notifiedAt      DateTime?
-  createdById     String
-  createdBy       User      @relation("VerseCreator", fields: [createdById], references: [id])
-  createdAt       DateTime  @default(now())
+  notifiedAt         DateTime?
+  reminderCount      Int       @default(0) // "submit your recitation" nudges sent this challenge week (capped at 3) — see src/lib/verse-email.ts
+  lastReminderSentAt DateTime? // guards against sending more than one reminder per Africa/Lagos calendar day
+  createdById        String
+  createdBy          User      @relation("VerseCreator", fields: [createdById], references: [id])
+  createdAt          DateTime  @default(now())
 
   recitations Recitation[]
 }

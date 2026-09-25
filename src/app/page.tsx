@@ -4,9 +4,11 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { GallerySection } from "@/components/GallerySection";
 import { ProgramIcon } from "@/components/ProgramIcon";
+import { PartnerLogoGrid } from "@/components/PartnerLogoGrid";
 import { getGalleryData } from "@/lib/gallery";
 import { loadSiteContent, resolvePrograms } from "@/lib/content-store";
 import { impactStats } from "@/lib/stats";
+import { getPartners } from "@/lib/partners";
 
 // Reads gallery items from the database, so render at request time rather than
 // statically at build time (the DB does not exist during the Docker build).
@@ -16,6 +18,8 @@ export default async function HomePage() {
   const { albums, photos } = await getGalleryData();
   const sc = await loadSiteContent();
   const stats = await impactStats(sc);
+  const { partners, supporters } = await getPartners();
+  const partnerLogos = [...partners, ...supporters];
   const heroImage = sc.image("home.hero.image");
   const programs = resolvePrograms(sc);
   const aboutCards = [1, 2, 3, 4].map((n) => ({ t: sc.get(`home.about.card${n}.title`), d: sc.get(`home.about.card${n}.desc`) }));
@@ -189,6 +193,18 @@ export default async function HomePage() {
           headingTitle={sc.get("gallery.hero.title")}
           headingSubtitle={sc.get("gallery.hero.subtitle")}
         />
+
+        {/* ---------- Partners & Supporters ---------- */}
+        {partnerLogos.length > 0 && (
+          <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="text-sm font-semibold uppercase tracking-wider text-brand-600">{sc.get("home.partners.eyebrow")}</span>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-brand-950 sm:text-4xl">{sc.get("home.partners.title")}</h2>
+              <p className="mt-4 text-lg text-brand-900/70">{sc.get("home.partners.subtitle")}</p>
+            </div>
+            <PartnerLogoGrid items={partnerLogos} />
+          </section>
+        )}
 
         {/* ---------- Donation ---------- */}
         <section className="bg-brand-950 py-20 text-white">

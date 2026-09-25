@@ -124,7 +124,8 @@ export async function createVerse(_prev: VerseState, formData: FormData): Promis
     data: { userId: me.id, action: "VERSE_ADDED", detail: reference },
   });
   // Announces immediately if this verse is live now; scheduled verses are
-  // picked up by the hourly job when their week begins.
+  // picked up by the 6am Africa/Lagos scheduler tick when their week begins
+  // (see src/lib/quran-scheduler.ts).
   await notifyMembersOfLiveVerse();
   revalidateQuran();
   return { ok: true };

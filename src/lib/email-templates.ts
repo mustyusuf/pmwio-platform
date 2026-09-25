@@ -486,7 +486,7 @@ export function contactReceived(name: string): Mail {
 }
 
 // ===========================================================================
-// 6. Qur'an Challenge — monthly recap
+// 6. Qur'an Challenge — weekly verse, submissions, reminders & monthly recap
 // ===========================================================================
 
 // #33 — all members, broadcast recap of the month's most active reciters
@@ -516,10 +516,6 @@ export function monthlyTopReciterCongrats(name: string, monthLabel: string, rank
   });
 }
 
-// ===========================================================================
-// 7. Qur'an Challenge — weekly verse & submissions
-// ===========================================================================
-
 // #35 — all members, broadcast when the week's verse goes live
 export function weeklyVerseLive(reference: string, translation: string): Mail {
   return layout({
@@ -548,6 +544,18 @@ export function recitationReceived(name: string, reference: string, totalCount: 
       { label: "Current streak", value: `${streak} week${streak === 1 ? "" : "s"}` },
     ],
     cta: { label: "View the leaderboard", url: DASHBOARD() + "/quran/leaderboard" },
+  });
+}
+
+// #37 — members who haven't yet submitted this week's recitation, up to 3x/week
+export function weeklyVerseReminder(reference: string): Mail {
+  return layout({
+    subject: `Reminder: submit your recitation — ${reference}`,
+    heading: "You haven't submitted this week's recitation yet",
+    body: [
+      `Don't miss out on this week's Qur'an Challenge verse, <strong>${escapeText(reference)}</strong>. Record your recitation before the week closes to keep your streak alive and stay on the leaderboard.`,
+    ],
+    cta: { label: "Submit your recitation", url: DASHBOARD() + "/quran" },
   });
 }
 

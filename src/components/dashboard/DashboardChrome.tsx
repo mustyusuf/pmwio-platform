@@ -10,6 +10,7 @@ import {
   FileText,
   GraduationCap,
   HandHeart,
+  Handshake,
   House,
   Images,
   ListChecks,
@@ -49,6 +50,7 @@ const SIDEBAR_ICONS = {
   mic: Mic,
   trophy: Trophy,
   archive: Archive,
+  handshake: Handshake,
 } satisfies Record<NavIcon, typeof House>;
 
 function Icon({ name }: { name: NavIcon }) {

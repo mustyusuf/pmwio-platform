@@ -93,6 +93,11 @@ export const CONTENT_FIELDS: ContentField[] = [
   { key: "home.programs.title", label: "Heading", type: "text", section: "Home — Programs section", default: "Three ways we change lives" },
   { key: "home.programs.intro", label: "Intro", type: "textarea", section: "Home — Programs section", default: "Every program is open for applications from the public — anyone in need can reach out for support." },
 
+  // ----- Home — Partners & Supporters -----
+  { key: "home.partners.eyebrow", label: "Eyebrow", type: "text", section: "Home — Partners & Supporters", default: "Working together" },
+  { key: "home.partners.title", label: "Heading", type: "text", section: "Home — Partners & Supporters", default: "Our Partners & Supporters" },
+  { key: "home.partners.subtitle", label: "Subtitle", type: "textarea", section: "Home — Partners & Supporters", default: "The organizations who work alongside us and support our mission." },
+
   // ----- Home — Donation section -----
   { key: "home.donate.eyebrow", label: "Eyebrow", type: "text", section: "Home — Donation section", default: "Support our mission" },
   { key: "home.donate.title", label: "Heading", type: "text", section: "Home — Donation section", default: "Turn compassion into practical support." },
@@ -166,6 +171,63 @@ export const CONTENT_FIELDS: ContentField[] = [
   { key: "donate.general.text", label: "General donation — text", type: "textarea", section: "Donate page", default: "Unrestricted donations help PMWIO direct support where it is needed most across all our programmes." },
   { key: "donate.appeals.eyebrow", label: "Appeals eyebrow", type: "text", section: "Donate page", default: "Current appeals" },
   { key: "donate.appeals.title", label: "Appeals heading", type: "text", section: "Donate page", default: "Donate to a specific cause" },
+
+  // ----- Orphanage / Sponsorship (Kafala) page -----
+  { key: "orphanage.hero.eyebrow", label: "Hero eyebrow", type: "text", section: "Orphanage page", default: "Kafala — Orphan Sponsorship" },
+  { key: "orphanage.hero.title", label: "Hero heading", type: "text", section: "Orphanage page", default: "Sponsor an Orphan Today: Share the Blessing of Kafala" },
+  { key: "orphanage.hero.subtitle", label: "Hero subtitle", type: "textarea", section: "Orphanage page", default: "Follow the Sunnah of caring for orphans (yatama) and provide a child with education, shelter, healthcare and spiritual growth." },
+  { key: "orphanage.hadith", label: "Hadith callout", type: "textarea", section: "Orphanage page", default: "“I and the person who looks after an orphan will be in Paradise like this,” putting his index and middle fingers together." },
+  { key: "orphanage.hadith.source", label: "Hadith source", type: "text", section: "Orphanage page", default: "Sahih al-Bukhari" },
+
+  { key: "orphanage.principle.title", label: "Islamic principle — heading", type: "text", section: "Orphanage page", default: "What Kafala Means" },
+  { key: "orphanage.principle.text", label: "Islamic principle — text", type: "textarea", section: "Orphanage page", default: "Kafala is the Islamic tradition of sponsoring and caring for an orphan — providing holistic guardianship, upbringing (tarbiyah) and support — without changing the child's lineage or identity. It is one of the most beloved acts of worship, drawing the sponsor and the child close together, as promised in the Sunnah." },
+
+  { key: "orphanage.cover1.title", label: "Coverage 1 — title", type: "text", section: "Orphanage page", default: "Nutritious Meals & Clean Water" },
+  { key: "orphanage.cover1.desc", label: "Coverage 1 — text", type: "textarea", section: "Orphanage page", default: "A healthy daily diet tailored for physical growth." },
+  { key: "orphanage.cover2.title", label: "Coverage 2 — title", type: "text", section: "Orphanage page", default: "Secular & Religious Education" },
+  { key: "orphanage.cover2.desc", label: "Coverage 2 — text", type: "textarea", section: "Orphanage page", default: "School tuition, books, uniforms and Qur'an / Hifz classes." },
+  { key: "orphanage.cover3.title", label: "Coverage 3 — title", type: "text", section: "Orphanage page", default: "Healthcare & Wellbeing" },
+  { key: "orphanage.cover3.desc", label: "Coverage 3 — text", type: "textarea", section: "Orphanage page", default: "Medical checkups, immunizations and counseling support." },
+  { key: "orphanage.cover4.title", label: "Coverage 4 — title", type: "text", section: "Orphanage page", default: "Safe Housing & Clothing" },
+  { key: "orphanage.cover4.desc", label: "Coverage 4 — text", type: "textarea", section: "Orphanage page", default: "Comfortable living spaces and seasonal clothing." },
+
+  { key: "orphanage.tiers.title", label: "Tiers — heading", type: "text", section: "Orphanage page", default: "Sponsorship Pricing Tiers" },
+  { key: "orphanage.tier1.name", label: "Tier 1 — name", type: "text", section: "Orphanage page", default: "Partial Care Partner" },
+  { key: "orphanage.tier1.price", label: "Tier 1 — price", type: "text", section: "Orphanage page", default: "$35 / month ($420 / year)" },
+  { key: "orphanage.tier1.scope", label: "Tier 1 — scope of coverage", type: "textarea", section: "Orphanage page", default: "Co-sponsorship covering food, basic health checkups and school supplies." },
+  { key: "orphanage.tier1.benefits", label: "Tier 1 — benefits (one per line)", type: "textarea", section: "Orphanage page", default: "Shared annual progress report\nInclusion in collective du'a lists" },
+  { key: "orphanage.tier2.name", label: "Tier 2 — name", type: "text", section: "Orphanage page", default: "Full Orphan Sponsorship" },
+  { key: "orphanage.tier2.price", label: "Tier 2 — price", type: "text", section: "Orphanage page", default: "$70 / month ($840 / year)" },
+  { key: "orphanage.tier2.scope", label: "Tier 2 — scope of coverage", type: "textarea", section: "Orphanage page", default: "Complete individual coverage: housing, education, meals, clothing and healthcare." },
+  { key: "orphanage.tier2.benefits", label: "Tier 2 — benefits (one per line)", type: "textarea", section: "Orphanage page", default: "Dedicated annual progress report\nPersonalized thank-you note or drawing from the child" },
+  { key: "orphanage.tier3.name", label: "Tier 3 — name", type: "text", section: "Orphanage page", default: "Comprehensive Care + Hifz" },
+  { key: "orphanage.tier3.price", label: "Tier 3 — price", type: "text", section: "Orphanage page", default: "$100 / month ($1,200 / year)" },
+  { key: "orphanage.tier3.scope", label: "Tier 3 — scope of coverage", type: "textarea", section: "Orphanage page", default: "Full orphan care plus specialized Qur'an memorization (Hifz) instruction and a higher-education savings fund." },
+  { key: "orphanage.tier3.benefits", label: "Tier 3 — benefits (one per line)", type: "textarea", section: "Orphanage page", default: "Full academic & Hifz progress reports\nBi-annual update on the child's Qur'anic milestones" },
+  { key: "orphanage.tiers.note", label: "Tiers — footnote", type: "textarea", section: "Orphanage page", default: "Amounts shown are suggested — donate the Naira equivalent, as a one-time annual gift or a recurring monthly contribution." },
+
+  { key: "orphanage.process.title", label: "Process — heading", type: "text", section: "Orphanage page", default: "How the Sponsorship Process Works" },
+  { key: "orphanage.process.steps", label: "Process — steps (one per line)", type: "textarea", section: "Orphanage page", default: "Choose your sponsorship level\nSelect a payment frequency (monthly or annual)\nReceive a welcome pack & child profile\nReceive regular updates & annual progress reports" },
+
+  { key: "orphanage.policy.title", label: "Policy — heading", type: "text", section: "Orphanage page", default: "Sponsor Update & Communication Policy" },
+  { key: "orphanage.policy.text", label: "Policy — text", type: "textarea", section: "Orphanage page", default: "To protect every child's dignity, safety and privacy while keeping sponsors informed: an annual progress report (academic report card, health summary and a recent photo) is delivered every 12 months; hand-written Eid cards or drawings are sent twice a year. Direct, unmonitored contact with a sponsored child (phone, social media or personal email) is not permitted, cash gifts to individual children are not accepted, and in-person visits must be pre-approved at least 30 days in advance." },
+
+  { key: "orphanage.faq.title", label: "FAQ — heading", type: "text", section: "Orphanage page", default: "Frequently Asked Questions" },
+  { key: "orphanage.faq1.q", label: "FAQ 1 — question", type: "text", section: "Orphanage page", default: "Is Orphan Sponsorship eligible for Zakat?" },
+  { key: "orphanage.faq1.a", label: "FAQ 1 — answer", type: "textarea", section: "Orphanage page", default: "Yes. Sponsorship funds go directly to poor, needy orphans who fit the eligible Zakat categories (al-Fuqara and al-Masakin)." },
+  { key: "orphanage.faq2.q", label: "FAQ 2 — question", type: "text", section: "Orphanage page", default: "How long does a sponsorship last?" },
+  { key: "orphanage.faq2.a", label: "FAQ 2 — answer", type: "textarea", section: "Orphanage page", default: "Sponsorship continues until the youth completes secondary school or higher education / vocational training, typically between ages 18 and 21." },
+  { key: "orphanage.faq3.q", label: "FAQ 3 — question", type: "text", section: "Orphanage page", default: "What happens if I need to cancel my sponsorship?" },
+  { key: "orphanage.faq3.a", label: "FAQ 3 — answer", type: "textarea", section: "Orphanage page", default: "You can pause or cancel at any time. We draw from our reserve fund to ensure uninterrupted care for the child while a new sponsor is assigned." },
+
+  { key: "orphanage.partners.eyebrow", label: "Partners — eyebrow", type: "text", section: "Orphanage page", default: "Working together" },
+  { key: "orphanage.partners.title", label: "Partners — heading", type: "text", section: "Orphanage page", default: "Our Partners" },
+  { key: "orphanage.partners.subtitle", label: "Partners — subtitle", type: "textarea", section: "Orphanage page", default: "Organizations we work alongside to care for the children in our orphanage program." },
+  { key: "orphanage.supporters.eyebrow", label: "Supporters — eyebrow", type: "text", section: "Orphanage page", default: "With gratitude" },
+  { key: "orphanage.supporters.title", label: "Supporters — heading", type: "text", section: "Orphanage page", default: "Supported By" },
+  { key: "orphanage.supporters.subtitle", label: "Supporters — subtitle", type: "textarea", section: "Orphanage page", default: "The organizations and donors whose generosity sustains this program." },
+
+  { key: "orphanage.cta.title", label: "Closing CTA — heading", type: "text", section: "Orphanage page", default: "Invest in your Akhirah today and change a child's life forever." },
 ];
 
 const DEFAULTS = new Map(CONTENT_FIELDS.map((f) => [f.key, f.default]));

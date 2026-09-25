@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { SocialIconLinks } from "./SocialLinks";
@@ -18,6 +19,7 @@ export function MobileNav({
   socials?: SocialLink[];
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="md:hidden">
@@ -34,16 +36,23 @@ export function MobileNav({
       {open && (
         <div className="absolute inset-x-0 top-16 z-50 border-b border-brand-100 bg-white px-4 py-4 shadow-lg">
           <nav className="flex flex-col gap-1">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-brand-900 hover:bg-brand-50"
-              >
-                {l.label}
-              </Link>
-            ))}
+            {links.map((l) => {
+              const isActive = l.href === "/" ? pathname === "/" : pathname === l.href || pathname?.startsWith(`${l.href}/`);
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className={`rounded-lg border-l-2 px-3 py-2.5 text-sm transition ${
+                    isActive
+                      ? "border-brand-700 bg-brand-50 font-semibold text-brand-900"
+                      : "border-transparent font-medium text-brand-900 hover:bg-brand-50"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
             <div className="mt-2 flex flex-col gap-2 border-t border-brand-100 pt-3">
               {isLoggedIn ? (
                 <Link
