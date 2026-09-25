@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+function lagosDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Lagos",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 function lagosTime(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "Africa/Lagos",
@@ -24,23 +34,26 @@ function NigeriaFlag() {
   );
 }
 
-/** Live Nigeria-time clock for the header. Renders nothing until mounted, so the server-rendered page never shows a stale or mismatched time. */
+/** Live Nigeria date/time for the header. Renders nothing until mounted, so the server-rendered page never shows a stale or mismatched value. */
 export function LiveClock() {
-  const [time, setTime] = useState<string | null>(null);
+  const [now, setNow] = useState<{ date: string; time: string } | null>(null);
 
   useEffect(() => {
-    const tick = () => setTime(lagosTime(new Date()));
+    const tick = () => {
+      const d = new Date();
+      setNow({ date: lagosDate(d), time: lagosTime(d) });
+    };
     tick();
     const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   }, []);
 
-  if (!time) return null;
+  if (!now) return null;
 
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <NigeriaFlag />
-      <span>{time} WAT</span>
+      <span>{now.date} · {now.time} WAT</span>
     </span>
   );
 }
