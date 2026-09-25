@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Verse" ADD COLUMN "reminderCount" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Verse" ADD COLUMN "lastReminderSentAt" DATETIME;
