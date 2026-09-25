@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 function lagosDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "Africa/Lagos",
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
-    month: "short",
+    month: "long",
     year: "numeric",
   }).format(date);
 }
@@ -17,8 +17,9 @@ function lagosTime(date: Date): string {
     timeZone: "Africa/Lagos",
     hour: "numeric",
     minute: "2-digit",
+    second: "2-digit",
     hour12: true,
-  }).format(date);
+  }).format(date).toLowerCase();
 }
 
 // Drawn inline rather than using the 🇳🇬 emoji — flag emoji support is
@@ -44,16 +45,19 @@ export function LiveClock() {
       setNow({ date: lagosDate(d), time: lagosTime(d) });
     };
     tick();
-    const id = setInterval(tick, 30_000);
+    const id = setInterval(tick, 1_000);
     return () => clearInterval(id);
   }, []);
 
   if (!now) return null;
 
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <NigeriaFlag />
-      <span>{now.date} · {now.time} WAT</span>
+    <span className="flex w-full items-center justify-between gap-3">
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <NigeriaFlag />
+        <span>{now.date}</span>
+      </span>
+      <span className="whitespace-nowrap font-medium tabular-nums">{now.time} WAT</span>
     </span>
   );
 }

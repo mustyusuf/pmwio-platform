@@ -28,7 +28,7 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-brand-100 bg-white/90 backdrop-blur">
       <div className="bg-brand-950">
-        <div className="mx-auto flex max-w-6xl items-center justify-end px-4 py-1.5 text-xs font-medium text-brand-100 sm:px-6">
+        <div className="mx-auto flex max-w-6xl items-center px-4 py-1.5 text-xs font-medium text-brand-100 sm:px-6">
           <LiveClock />
         </div>
       </div>
