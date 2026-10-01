@@ -8,10 +8,14 @@ import { Calendar } from "lucide-react";
  * this icon is drawn in its place, so both browsers show one consistent,
  * visible icon.
  */
-export function DateInput({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+export function DateInput({
+  className,
+  type = "date",
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { type?: "date" | "month" }) {
   return (
     <div className="relative">
-      <input type="date" {...props} className={`${className ?? ""} pr-9`} />
+      <input type={type} {...props} className={`${className ?? ""} pr-9`} />
       <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-700/60" aria-hidden />
     </div>
   );

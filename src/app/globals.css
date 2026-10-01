@@ -90,11 +90,13 @@ section[id] {
   }
 }
 
-/* Chrome/Android draws its own calendar icon on <input type="date">; Safari
-   draws none at all. Hide Chromium's (DateInput overlays a consistent one
-   in its place — see dashboard/DateInput.tsx) while keeping it as the
-   clickable hit target that still opens the native picker. */
-input[type="date"]::-webkit-calendar-picker-indicator {
+/* Chrome/Android draws its own calendar icon on <input type="date"> and
+   type="month">; Safari draws none at all. Hide Chromium's (DateInput
+   overlays a consistent one in its place — see dashboard/DateInput.tsx)
+   while keeping it as the clickable hit target that still opens the
+   native picker. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
   opacity: 0;
   position: absolute;
   right: 0;

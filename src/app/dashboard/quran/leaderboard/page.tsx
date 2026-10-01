@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
+import { ROLES } from "@/lib/roles";
 import { getAllTimeLeaderboard, getWeeklyStreakLeaderboard, getMonthlyLeaderboard, type LeaderboardEntry } from "@/lib/leaderboard";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel } from "@/components/dashboard/ui";
 import { QuranLeaderboardTabs, type LeaderboardTab } from "@/components/dashboard/QuranLeaderboardTabs";
+import { ResendRecapForm } from "@/components/dashboard/ResendRecapForm";
 import type { Row } from "@/components/dashboard/DataTable";
 
 export const metadata: Metadata = { title: "Qur'an Challenge Leaderboard" };
@@ -44,12 +46,20 @@ export default async function QuranLeaderboardPage() {
     { key: "streak", label: "Current streak", countLabel: "Weeks", rows: toRows(streaks), emptyText: "No active streaks yet." },
   ];
 
+  const isAdmin = user.role === ROLES.ADMIN || user.role === ROLES.EXECUTIVE;
+
   return (
     <>
       <PageHeader title="Qur'an Challenge Leaderboard" subtitle="See how your recitation habit compares." />
       <Panel>
         <QuranLeaderboardTabs tabs={tabs} />
       </Panel>
+      {isAdmin && (
+        <Panel title="Resend monthly recap">
+          <p className="mb-4 text-sm text-brand-900/60">Manually send the top-10 broadcast and congratulations emails for a given month.</p>
+          <ResendRecapForm />
+        </Panel>
+      )}
     </>
   );
 }
