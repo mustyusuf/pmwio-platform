@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Images, X } from "lucide-react";
 import { createAlbum, type GalleryState } from "@/app/actions/gallery";
 import { GALLERY_CATEGORIES } from "@/lib/content";
+import { DateInput } from "./DateInput";
 
 const label = "block text-sm font-medium text-brand-900";
 const input = "mt-1.5 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200";
@@ -109,7 +110,7 @@ export function AlbumCreateForm() {
 
               <div>
                 <label htmlFor="published-at" className={label}>Publication date</label>
-                <input id="published-at" name="publishedAt" type="date" className={input} />
+                <DateInput id="published-at" name="publishedAt" className={input} />
                 <p className="mt-1 text-xs text-brand-900/50">Optional for drafts. Published albums without a date use today.</p>
               </div>
 

@@ -13,6 +13,7 @@ import { ApplicationVoteCard } from "@/components/dashboard/VoteCards";
 import { castBoardVote, castExecutiveVote } from "@/app/actions/workflow";
 import { setScholarshipPeriod, renewScholarship } from "@/app/actions/scholarship";
 import { TermReportForm } from "@/components/dashboard/TermReportForm";
+import { DateInput } from "@/components/dashboard/DateInput";
 import { humanSize } from "@/lib/uploads";
 
 export const metadata: Metadata = { title: "Application" };
@@ -295,8 +296,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 <form action={setScholarshipPeriod} className="mt-4 space-y-2 border-t border-brand-100 pt-3">
                   <input type="hidden" name="applicationId" value={app.id} />
                   <div className="grid grid-cols-2 gap-3">
-                    <div><label className="text-xs text-brand-900/50">Start date</label><input type="date" name="start" defaultValue={app.scholarshipStart ? new Date(app.scholarshipStart).toISOString().slice(0, 10) : ""} className="mt-1 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm" /></div>
-                    <div><label className="text-xs text-brand-900/50">End date</label><input type="date" name="end" defaultValue={app.scholarshipEnd ? new Date(app.scholarshipEnd).toISOString().slice(0, 10) : ""} className="mt-1 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm" /></div>
+                    <div><label className="text-xs text-brand-900/50">Start date</label><DateInput name="start" defaultValue={app.scholarshipStart ? new Date(app.scholarshipStart).toISOString().slice(0, 10) : ""} className="mt-1 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm" /></div>
+                    <div><label className="text-xs text-brand-900/50">End date</label><DateInput name="end" defaultValue={app.scholarshipEnd ? new Date(app.scholarshipEnd).toISOString().slice(0, 10) : ""} className="mt-1 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm" /></div>
                   </div>
                   <button className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-800">
                     <Save className="h-3.5 w-3.5" aria-hidden />Save period

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { Archive } from "lucide-react";
 import { createArchiveItem, type ArchiveState } from "@/app/actions/archive";
 import { CATEGORY_LABEL, MEDIA_TYPE_LABEL } from "@/lib/archive-constants";
+import { DateInput } from "./DateInput";
 
 const label = "block text-sm font-medium text-brand-900";
 const input =
@@ -63,7 +64,7 @@ export function ArchiveCreateForm() {
         </div>
         <div>
           <label className={label} htmlFor="eventDate">Event date (optional)</label>
-          <input id="eventDate" name="eventDate" type="date" className={input} />
+          <DateInput id="eventDate" name="eventDate" className={input} />
         </div>
       </div>
 

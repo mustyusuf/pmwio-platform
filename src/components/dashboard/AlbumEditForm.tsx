@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Pencil, X, Trash2, Plus } from "lucide-react";
 import { updateAlbum, addAlbumImages, updateImageCaption, deleteGalleryImage, type GalleryState } from "@/app/actions/gallery";
 import { GALLERY_CATEGORIES } from "@/lib/content";
+import { DateInput } from "./DateInput";
 
 const label = "block text-sm font-medium text-brand-900";
 const input = "mt-1.5 w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200";
@@ -67,7 +68,7 @@ export function AlbumEditForm({ album }: { album: EditableAlbum }) {
                   </div>
                   <div>
                     <label htmlFor={`p-${album.id}`} className={label}>Publication date</label>
-                    <input id={`p-${album.id}`} name="publishedAt" type="date" defaultValue={album.publishedDate} className={input} />
+                    <DateInput id={`p-${album.id}`} name="publishedAt" defaultValue={album.publishedDate} className={input} />
                   </div>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-brand-900/80">

@@ -76,3 +76,28 @@ section[id] {
   font-size: 0.875rem;
   line-height: 1.5;
 }
+
+/* iOS Safari auto-zooms the whole page when a focused form field's
+   font-size is under 16px, and the zoom frequently doesn't reset cleanly
+   afterward — the page is left looking zoomed-out/blurry. Our compact
+   text-sm/text-xs inputs trigger this on every tap. Force 16px specifically
+   on small screens, where it matters; desktop keeps its tighter sizing. */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Chrome/Android draws its own calendar icon on <input type="date">; Safari
+   draws none at all. Hide Chromium's (DateInput overlays a consistent one
+   in its place — see dashboard/DateInput.tsx) while keeping it as the
+   clickable hit target that still opens the native picker. */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 2.25rem;
+  height: 100%;
+}

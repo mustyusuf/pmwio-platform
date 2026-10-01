@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { BookPlus, RotateCcw, Search } from "lucide-react";
 import { createVerse, previewVerse, type VerseState, type VersePreview } from "@/app/actions/quran";
 import { SURAHS, getSurah } from "@/lib/quran-source";
+import { DateInput } from "./DateInput";
 
 const label = "block text-sm font-medium text-brand-900";
 const input =
@@ -106,7 +107,7 @@ export function VerseCreateForm() {
       </div>
       <div>
         <label className={label} htmlFor="weekOf">Challenge week (starting)</label>
-        <input id="weekOf" name="weekOf" type="date" required className={input} />
+        <DateInput id="weekOf" name="weekOf" required className={input} />
       </div>
       <label className="flex items-center gap-2 text-sm text-brand-900">
         <input type="checkbox" name="publish" value="true" defaultChecked className="rounded border-brand-300" />
