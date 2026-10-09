@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { DataTable, type Column, type Filter, type Row } from "@/components/dashboard/DataTable";
 import { Panel, StatCard } from "@/components/dashboard/ui";
 import { DonationCampaignForm } from "@/components/dashboard/DonationCampaignForm";
+import { TestPaymentsCleanup } from "@/components/dashboard/TestPaymentsCleanup";
 import { toggleDonationCampaign } from "@/app/actions/donations";
 import { formatDate, formatMoney } from "@/lib/format";
 
@@ -140,6 +141,15 @@ export default async function DonationsPage({
       </Panel>
 
       <DataTable columns={columns} rows={rows} searchKeys={["donor", "email", "reference", "campaign", "memberId"]} filters={filters} searchPlaceholder="Search donations…" />
+
+      {canManage && (
+        <Panel title="Clean up test payments" className="mt-6">
+          <p className="mb-4 text-sm text-brand-900/60">
+            Removes donations, member subscriptions and Paystack plans created while Paystack was in test mode. Applications, disbursements and members are never touched. Always preview first.
+          </p>
+          <TestPaymentsCleanup />
+        </Panel>
+      )}
     </>
   );
 }
