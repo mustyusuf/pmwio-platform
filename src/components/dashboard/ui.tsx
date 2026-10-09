@@ -71,7 +71,7 @@ export function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export function formatDate(d: Date | string) {
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Lagos" }).format(
     new Date(d),
   );
 }

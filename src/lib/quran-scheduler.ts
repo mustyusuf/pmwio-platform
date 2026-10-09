@@ -3,6 +3,7 @@ import { purgeExpiredRecitationAudio } from "@/lib/recitation-cleanup";
 import { notifyMembersOfLiveVerse } from "@/lib/verse-notify";
 import { checkAndSendReminders } from "@/lib/verse-email";
 import { lagosHour } from "@/lib/timezone";
+import { reconcilePendingDonations } from "@/lib/paystack";
 
 // Guards against double-starting the interval on dev hot-reload, where
 // register() can run again on the same process.
@@ -27,6 +28,11 @@ async function runDailyJobs() {
     });
     await checkMonthlyLeaderboardEmail().catch((err) => {
       console.error("[quran] monthly leaderboard email check failed:", err);
+    });
+    // Not Qur'an-specific, but this is the app's only daily job runner: settle
+    // donations stuck as PENDING (abandoned checkouts, missed webhooks).
+    await reconcilePendingDonations().catch((err) => {
+      console.error("[paystack] pending donation reconcile failed:", err);
     });
   }
   await purgeExpiredRecitationAudio().catch((err) => {

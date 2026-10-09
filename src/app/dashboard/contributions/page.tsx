@@ -38,6 +38,7 @@ export default async function ContributionsPage({
       <PageHeader title="Monthly contributions" subtitle="Set up and track your recurring support to PMWIO." />
       {payment === "success" && <p className="mb-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Your contribution was received and your monthly plan is being activated.</p>}
       {payment === "pending" && <p className="mb-5 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Paystack is still confirming this contribution.</p>}
+      {payment === "failed" && <p className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">That payment wasn&apos;t completed, so you have not been charged. Please try again.</p>}
       {error && <p className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

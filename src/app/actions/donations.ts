@@ -139,6 +139,7 @@ export async function startMonthlyContribution(formData: FormData) {
       status: "PENDING",
       paystackSubscriptionCode: null,
       nextPaymentAt: null,
+      lastPaymentAt: null, // a restarted contribution begins afresh
     },
   });
   const ref = reference("MEM");

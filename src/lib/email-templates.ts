@@ -425,35 +425,153 @@ export function termReportAlert(coordinatorName: string, studentName: string, te
 // 5. Donations & contact
 // ===========================================================================
 
+const lagosDate = (d: Date) =>
+  new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(d);
+
 // #28 & #30 — donor / contributing member, receipt
-export function donationReceipt(d: { name: string; amount: number; reference: string; recurring?: boolean }): Mail {
+export function donationReceipt(d: {
+  name: string;
+  amount: number;
+  reference: string;
+  recurring?: boolean;
+  firstContribution?: boolean; // the first charge of a new monthly contribution
+  nextPaymentAt?: Date | null;
+  campaign?: string | null;
+}): Mail {
+  const body = d.recurring
+    ? [
+        d.firstContribution
+          ? `Thank you for starting a monthly contribution to the Pious Muslim Women International Organization. Your first payment of ${naira(d.amount)} has been received and your monthly contribution is now active.`
+          : `Thank you for your monthly contribution to the Pious Muslim Women International Organization. Your support of ${naira(d.amount)} has been received.`,
+        ...(d.nextPaymentAt ? [`Your next contribution of ${naira(d.amount)} is expected on <strong>${lagosDate(d.nextPaymentAt)}</strong>.`] : []),
+      ]
+    : [
+        d.campaign
+          ? `Thank you for your generous donation to <strong>${escapeText(d.campaign)}</strong>. Your gift of ${naira(d.amount)} has been received.`
+          : `Thank you for your generous donation to the Pious Muslim Women International Organization. Your gift of ${naira(d.amount)} has been received.`,
+      ];
   return layout({
-    subject: d.recurring ? "Your monthly contribution — receipt" : "Thank you for your donation",
-    heading: d.recurring ? "Contribution received" : "Your donation was received",
+    subject: d.recurring
+      ? d.firstContribution ? "Your monthly contribution is active" : "Your monthly contribution — receipt"
+      : "Thank you for your donation",
+    heading: d.recurring ? (d.firstContribution ? "Monthly contribution started" : "Contribution received") : "Your donation was received",
     intro: `Dear ${firstName(d.name)},`,
-    body: [
-      d.recurring
-        ? `Thank you for your monthly contribution to the Pious Muslim Women International Organization. Your support of ${naira(d.amount)} has been received.`
-        : `Thank you for your generous donation to the Pious Muslim Women International Organization. Your gift of ${naira(d.amount)} has been received.`,
-      "May Allah reward your generosity. This email serves as your receipt.",
-    ],
+    body: [...body, "May Allah reward your generosity. This email serves as your receipt."],
     facts: [
       { label: "Amount", value: naira(d.amount) },
       { label: "Reference", value: d.reference },
+      ...(d.campaign ? [{ label: "Campaign", value: d.campaign }] : []),
     ],
   });
 }
 
-// #29 — admins & executives, a donation was received
-export function donationAlert(donorName: string, amount: number, reference: string): Mail {
+// #29 — admins, executives & finance, a donation was received
+export function donationAlert(d: {
+  donorName: string;
+  amount: number;
+  reference: string;
+  kind: "general" | "campaign" | "monthly-first" | "monthly";
+  campaign?: string | null;
+  message?: string | null;
+}): Mail {
+  const what = {
+    general: "General donation",
+    campaign: `Campaign donation${d.campaign ? ` — ${d.campaign}` : ""}`,
+    "monthly-first": "New monthly contributor (first payment)",
+    monthly: "Monthly contribution (renewal)",
+  }[d.kind];
   return layout({
-    subject: `New donation received — ${naira(amount)}`,
-    heading: "New donation received",
-    body: [`A donation of ${naira(amount)} was received from ${escapeText(donorName)}.`],
+    subject: `${d.kind === "monthly-first" ? "New monthly contributor" : "New donation received"} — ${naira(d.amount)}`,
+    heading: d.kind === "monthly-first" ? "New monthly contributor" : "New donation received",
+    body: [`${what}: ${naira(d.amount)} from ${escapeText(d.donorName)}.`],
     facts: [
-      { label: "Amount", value: naira(amount) },
-      { label: "Donor", value: donorName },
-      { label: "Reference", value: reference },
+      { label: "Type", value: what },
+      { label: "Amount", value: naira(d.amount) },
+      { label: "Donor", value: d.donorName },
+      { label: "Reference", value: d.reference },
+      ...(d.message ? [{ label: "Message", value: d.message }] : []),
+    ],
+    cta: { label: "View donations", url: link("/dashboard/donations") },
+  });
+}
+
+// #38 — donor, a donation was started but never completed (failed or abandoned)
+export function donationNotCompleted(d: { name: string; amount: number; reference: string; campaign?: string | null }): Mail {
+  return layout({
+    subject: "Your donation wasn't completed",
+    heading: "Your donation wasn't completed",
+    intro: `Dear ${firstName(d.name)},`,
+    body: [
+      `You started a donation of ${naira(d.amount)}${d.campaign ? ` to <strong>${escapeText(d.campaign)}</strong>` : ""}, but the payment didn't go through, so you have not been charged.`,
+      "If you'd still like to give, you can try again at any time. Thank you for your kindness.",
+    ],
+    facts: [{ label: "Reference", value: d.reference }],
+    cta: { label: "Try again", url: link("/donate") },
+  });
+}
+
+// #39 — member, a monthly contribution is about to be charged
+export function contributionUpcoming(d: { name: string; amount: number; date?: Date | null }): Mail {
+  return layout({
+    subject: "Your monthly contribution is coming up",
+    heading: "Your next contribution",
+    intro: `Dear ${firstName(d.name)},`,
+    body: [
+      `This is a friendly reminder that your monthly contribution of ${naira(d.amount)} will be charged${d.date ? ` on <strong>${lagosDate(d.date)}</strong>` : " soon"} using the card you authorised on Paystack.`,
+      "Please make sure your card has enough funds. Thank you for your continued support.",
+    ],
+    cta: { label: "View my contribution", url: link("/dashboard/contributions") },
+  });
+}
+
+// #40 — member, a monthly contribution charge failed
+export function contributionPaymentFailed(d: { name: string; amount: number }): Mail {
+  return layout({
+    subject: "Your monthly contribution payment failed",
+    heading: "We couldn't collect your contribution",
+    intro: `Dear ${firstName(d.name)},`,
+    body: [
+      `We tried to collect your monthly contribution of ${naira(d.amount)} but the payment didn't go through. This is usually caused by insufficient funds or an expired card.`,
+      "Paystack will retry automatically. If it keeps failing, please contact an administrator so we can help you set up your contribution again.",
+    ],
+    cta: { label: "View my contribution", url: link("/dashboard/contributions") },
+  });
+}
+
+// #41 — member, a monthly contribution was cancelled or won't renew
+export function contributionEnded(d: { name: string; amount: number; stopped: boolean }): Mail {
+  return layout({
+    subject: d.stopped ? "Your monthly contribution has been cancelled" : "Your monthly contribution will not renew",
+    heading: d.stopped ? "Monthly contribution cancelled" : "Monthly contribution will not renew",
+    intro: `Dear ${firstName(d.name)},`,
+    body: [
+      d.stopped
+        ? `Your monthly contribution of ${naira(d.amount)} has been cancelled and you will no longer be charged.`
+        : `Your monthly contribution of ${naira(d.amount)} has been set not to renew, so you will not be charged again after the current period.`,
+      "Thank you for everything you have given. You are welcome to start a new monthly contribution from your dashboard at any time.",
+    ],
+    cta: { label: "Go to my dashboard", url: link("/dashboard/contributions") },
+  });
+}
+
+// #42 — admins, executives & finance, a member's monthly contribution needs attention
+export function contributionStaffAlert(d: {
+  memberName: string;
+  amount: number;
+  event: "payment_failed" | "not_renewing" | "cancelled";
+}): Mail {
+  const what = {
+    payment_failed: "had a failed monthly contribution payment",
+    not_renewing: "set their monthly contribution not to renew",
+    cancelled: "had their monthly contribution cancelled",
+  }[d.event];
+  return layout({
+    subject: `Monthly contribution update — ${d.memberName}`,
+    heading: "Monthly contribution update",
+    body: [`${escapeText(d.memberName)} ${what} (${naira(d.amount)} per month).`],
+    facts: [
+      { label: "Member", value: d.memberName },
+      { label: "Monthly amount", value: naira(d.amount) },
     ],
     cta: { label: "View donations", url: link("/dashboard/donations") },
   });

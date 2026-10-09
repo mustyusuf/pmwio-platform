@@ -65,7 +65,7 @@ export default async function DonatePage({
           <div className="rounded-3xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">
             {payment === "success" && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Thank you. Your donation was received successfully.</p>}
             {payment === "pending" && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Your payment is being confirmed. The donation record will update shortly.</p>}
-            {payment === "failed" && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">We could not verify that payment. Please try again.</p>}
+            {payment === "failed" && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">That payment wasn&apos;t completed, so you have not been charged. Please try again.</p>}
             <DonationForm returnPath="/donate" error={error} />
           </div>
         </section>
