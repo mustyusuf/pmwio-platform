@@ -7,8 +7,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, EmptyState, formatDate } from "@/components/dashboard/ui";
 import { CreateUserForm } from "@/components/dashboard/CreateUserForm";
 import { UsersManagementTable } from "@/components/dashboard/UsersManagementTable";
-import { MemberApprovalActions } from "@/components/dashboard/MemberApprovalActions";
-import { ChangeRoleButton } from "@/components/dashboard/ChangeRoleButton";
+import { MembersToValidate } from "@/components/dashboard/MembersToValidate";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -58,22 +57,17 @@ export default async function UsersPage() {
         {pending.length === 0 ? (
           <EmptyState>No members are awaiting validation.</EmptyState>
         ) : (
-          <ul className="divide-y divide-brand-100">
-            {pending.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div>
-                  <p className="font-medium text-brand-900">{p.name}</p>
-                  <p className="text-xs text-brand-900/50">{p.email}{p.country ? ` · ${p.country}` : ""} · registered {formatDate(p.createdAt)}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Staff who self-registered land here as Members — promoting
-                      them from this list also validates the account. */}
-                  <ChangeRoleButton userId={p.id} name={p.name} currentRole={p.role} currentStates={parseStates(p.states)} />
-                  <MemberApprovalActions userId={p.id} name={p.name} />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <MembersToValidate
+            members={pending.map((p) => ({
+              id: p.id,
+              name: p.name,
+              email: p.email,
+              country: p.country,
+              registered: formatDate(p.createdAt),
+              role: p.role,
+              states: parseStates(p.states),
+            }))}
+          />
         )}
       </Panel>
 

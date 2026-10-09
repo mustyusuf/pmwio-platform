@@ -344,6 +344,50 @@ export async function approveMember(formData: FormData) {
   revalidatePath("/dashboard/users");
 }
 
+export type BulkApproveResult = { ok: true; approved: number; skipped: number } | { ok: false; error: string };
+
+/**
+ * Validate many self-registered members at once. Does exactly what
+ * approveMember does for one — marks them approved, adds an in-app
+ * notification and an audit entry each, and emails the member their
+ * activation message — but only for members who are still waiting AND have
+ * confirmed their email (the same rule as the list on the Users page), so a
+ * stale selection can't validate anyone it shouldn't.
+ */
+export async function approveMembers(ids: string[]): Promise<BulkApproveResult> {
+  const me = await requireRole([ROLES.ADMIN, ROLES.EXECUTIVE]);
+  const unique = [...new Set(ids.filter((id) => typeof id === "string" && id))];
+  if (unique.length === 0) return { ok: false, error: "Select at least one member." };
+  if (unique.length > 1000) return { ok: false, error: "That's too many at once — validate up to 1,000 members at a time." };
+
+  const eligible = await prisma.user.findMany({
+    where: { id: { in: unique }, approved: false, emailVerified: true },
+    select: { id: true, name: true, userId: true, email: true },
+  });
+  if (eligible.length === 0) {
+    return { ok: false, error: "None of the selected members are waiting for validation any more." };
+  }
+
+  await prisma.$transaction([
+    prisma.user.updateMany({ where: { id: { in: eligible.map((u) => u.id) } }, data: { approved: true, active: true } }),
+    prisma.notification.createMany({
+      data: eligible.map((u) => ({ userId: u.id, title: "Membership validated 🎉", body: "An administrator has validated your membership." })),
+    }),
+    prisma.activityLog.createMany({
+      data: eligible.map((u) => ({ userId: me.id, action: "MEMBER_APPROVED", detail: `${u.name} (${u.userId})` })),
+    }),
+  ]);
+
+  // Email #4 to each member. Sent in the background, one after another, so a
+  // large batch doesn't make the admin wait on the mail server (send() never throws).
+  void (async () => {
+    for (const u of eligible) await send(u.email, tpl.memberApproved(u.name, u.userId));
+  })();
+
+  revalidatePath("/dashboard/users");
+  return { ok: true, approved: eligible.length, skipped: unique.length - eligible.length };
+}
+
 /**
  * Records a user leaves behind that must never be silently destroyed: they are
  * someone else's audit trail (who reviewed/approved what) or organizational
