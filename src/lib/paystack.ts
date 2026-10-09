@@ -43,6 +43,8 @@ export type PaystackTransaction = {
   reference: string;
   status: string;
   amount: number;
+  // What the donor asked to give, before any Paystack fee passed on to them.
+  requested_amount?: number;
   currency: string;
   channel?: string;
   paid_at?: string | null;
@@ -168,6 +170,18 @@ async function sendDonationEmails(d: SuccessEmailInput) {
   );
 }
 
+/**
+ * Whether a charge covers what we expected. When Paystack is set to pass its
+ * fee on to the donor, the charge is a little MORE than the donation (e.g.
+ * ₦507.62 for a ₦500 gift), so an exact match would wrongly reject real
+ * payments. We only guard against underpayment; the donation is recorded at
+ * the amount the donor chose to give.
+ */
+function coversAmount(data: PaystackTransaction, expectedNaira: number) {
+  const expectedKobo = Math.round(expectedNaira * 100);
+  return data.amount >= expectedKobo && (data.requested_amount ?? expectedKobo) >= expectedKobo;
+}
+
 /** Idempotently reconciles a successful Paystack charge into the local ledger. */
 export async function recordSuccessfulCharge(data: PaystackTransaction) {
   if (data.status !== "success") return false;
@@ -178,8 +192,10 @@ export async function recordSuccessfulCharge(data: PaystackTransaction) {
     include: { campaign: { select: { title: true } }, subscription: true },
   });
   if (existing) {
-    if (data.amount !== Math.round(existing.amount * 100) || data.currency !== existing.currency) {
-      console.warn(`[paystack] ${data.reference}: amount/currency doesn't match the pending donation — not recorded.`);
+    if (!coversAmount(data, existing.amount) || data.currency !== existing.currency) {
+      console.warn(
+        `[paystack] ${data.reference}: charged ${data.amount} ${data.currency} (requested ${data.requested_amount ?? "n/a"}) doesn't cover the expected ${Math.round(existing.amount * 100)} ${existing.currency} — not recorded.`,
+      );
       return false;
     }
     // Claim the PENDING/FAILED -> SUCCESS transition atomically. The browser
@@ -231,7 +247,7 @@ export async function recordSuccessfulCharge(data: PaystackTransaction) {
     where: { member: { email }, plan: { paystackPlanCode: planCode } },
     include: { member: true },
   });
-  if (!subscription || data.amount !== Math.round(subscription.amount * 100)) {
+  if (!subscription || !coversAmount(data, subscription.amount)) {
     console.warn(`[paystack] ${data.reference}: renewal for ${email} doesn't match a subscription — not recorded.`);
     return false;
   }
