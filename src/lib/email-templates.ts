@@ -577,6 +577,25 @@ export function contributionStaffAlert(d: {
   });
 }
 
+// #43 — admin broadcast to a chosen audience (Dashboard -> Broadcast). The
+// message is plain text from an admin: escaped, with blank lines starting a
+// new paragraph and single line breaks kept.
+export function broadcastMessage(d: { subject: string; message: string; ctaLabel?: string; ctaUrl?: string }): Mail {
+  const paragraphs = d.message
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => escapeText(p).replace(/\n/g, "<br/>"));
+  return layout({
+    subject: d.subject,
+    heading: d.subject,
+    intro: "Assalamu alaikum,",
+    body: paragraphs,
+    cta: d.ctaLabel && d.ctaUrl ? { label: d.ctaLabel, url: d.ctaUrl } : undefined,
+  });
+}
+
 // #31 — admins & executives, a contact message arrived
 export function contactAlert(d: { name: string; email: string; subject?: string; message: string }): Mail {
   return layout({

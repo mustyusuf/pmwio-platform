@@ -382,6 +382,7 @@ async function purgeUser(userId: string) {
     prisma.application.updateMany({ where: { referredById: userId }, data: { referredById: null } }),
     prisma.donation.updateMany({ where: { memberId: userId }, data: { memberId: null } }),
     prisma.activityLog.updateMany({ where: { userId }, data: { userId: null } }),
+    prisma.broadcast.updateMany({ where: { sentById: userId }, data: { sentById: null } }),
     prisma.payment.updateMany({ where: { createdById: userId }, data: { createdById: null } }),
     prisma.payment.updateMany({ where: { approvedById: userId }, data: { approvedById: null } }),
     // The subscription row is personal, but its donations are ledger entries.

@@ -50,6 +50,7 @@ model User {
   versesCreated            Verse[]                   @relation("VerseCreator")
   recitations              Recitation[]
   archiveItems             ArchiveItem[]              @relation("ArchiveCreator")
+  broadcasts               Broadcast[]               @relation("BroadcastSender")
 }
 
 /// A beneficiary's request for support. Moves through a multi-stage workflow:
@@ -503,4 +504,21 @@ model ArchiveItem {
   createdById     String
   createdBy       User      @relation("ArchiveCreator", fields: [createdById], references: [id])
   createdAt       DateTime  @default(now())
+}
+
+/// A message an administrator emailed to one or more user categories from
+/// Dashboard -> Broadcast. Kept as a history so admins can see what went out,
+/// to whom and when. Test sends (to the admin only) are not recorded.
+model Broadcast {
+  id             String   @id @default(cuid())
+  subject        String
+  message        String
+  ctaLabel       String?
+  ctaUrl         String?
+  audience       String // comma-separated role keys, e.g. "MEMBER,COORDINATOR"
+  recipientCount Int
+  delivered      Boolean // false if the mail server rejected any batch
+  sentById       String?
+  sentBy         User?    @relation("BroadcastSender", fields: [sentById], references: [id])
+  createdAt      DateTime @default(now())
 }

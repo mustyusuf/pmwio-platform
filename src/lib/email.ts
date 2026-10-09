@@ -220,7 +220,7 @@ export function layout(opts: LayoutOptions): Mail {
 }
 
 function stripTags(s: string): string {
-  return s.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+  return s.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
 }
 
 /** Absolute URL for a path within the app (used in CTA links). */

@@ -20,7 +20,8 @@ export type NavIcon =
   | "mic"
   | "trophy"
   | "archive"
-  | "handshake";
+  | "handshake"
+  | "megaphone";
 export type NavItem = { label: string; href: string; icon: NavIcon; children?: NavChild[]; disabled?: boolean; badge?: string };
 
 const PROFILE_ITEM: NavItem = { label: "My Profile", href: "/dashboard/profile", icon: "user" };
@@ -103,6 +104,7 @@ export function navForRole(role: string, opts: { empowermentOpen?: boolean } = {
       { label: "Archive", href: "/dashboard/archive", icon: "archive" },
       { label: "Management Team", href: "/dashboard/team", icon: "users" },
       { label: "Partners & Supporters", href: "/dashboard/partners", icon: "handshake" },
+      { label: "Broadcast", href: "/dashboard/broadcast", icon: "megaphone" },
       { label: "Weekly Verse", href: "/dashboard/quran-admin", icon: "mic" },
       { label: "Qur'an Leaderboard", href: "/dashboard/quran/leaderboard", icon: "trophy" },
       { label: "Site Content", href: "/dashboard/content", icon: "pencil" },
