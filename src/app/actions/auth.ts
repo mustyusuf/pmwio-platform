@@ -1,5 +1,6 @@
 "use server";
 
+import { safeNextPath } from "@/lib/redirects";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { redirect } from "next/navigation";
@@ -142,7 +143,7 @@ export async function loginAction(
   }
 
   await createSession({ sub: user.id, code: user.userId, name: user.name, role: user.role });
-  redirect("/dashboard");
+  redirect(safeNextPath(formData.get("next")));
 }
 
 export async function logoutAction(): Promise<void> {

@@ -9,7 +9,7 @@ const label = "block text-sm font-medium text-brand-900";
 const input =
   "mt-1.5 w-full rounded-xl border border-brand-200 bg-white px-4 py-2.5 text-brand-950 outline-none transition placeholder:text-brand-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200";
 
-export function LoginForm() {
+export function LoginForm({ next = "/dashboard" }: { next?: string }) {
   const [state, formAction] = useActionState<AuthState, FormData>(
     loginAction,
     null,
@@ -17,6 +17,7 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="next" value={next} />
       {state?.error && (
         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100">
           {state.error}

@@ -5,11 +5,14 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { LoginForm } from "@/components/forms/LoginForm";
 import { getSession } from "@/lib/session";
+import { safeNextPath } from "@/lib/redirects";
 
 export const metadata: Metadata = { title: "Member Login" };
 
-export default async function LoginPage() {
-  if (await getSession()) redirect("/dashboard");
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const next = safeNextPath((await searchParams).next);
+  // Already signed in: skip the form and go straight to where they were headed.
+  if (await getSession()) redirect(next);
 
   return (
     <>
@@ -25,7 +28,7 @@ export default async function LoginPage() {
             </p>
 
             <div className="mt-6">
-              <LoginForm />
+              <LoginForm next={next} />
             </div>
 
             <p className="mt-4 text-center text-sm">

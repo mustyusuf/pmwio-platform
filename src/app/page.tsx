@@ -61,10 +61,10 @@ export default async function HomePage() {
                 Become a member
               </Link>
               <Link
-                href="/apply"
+                href="/login?next=/dashboard/quran"
                 className="rounded-full bg-brand-600 px-7 py-3.5 text-center text-base font-semibold text-white ring-1 ring-white/30 transition hover:bg-brand-500"
               >
-                Apply for support
+                Qur&apos;an Challenge
               </Link>
               <Link
                 href="/donate"
