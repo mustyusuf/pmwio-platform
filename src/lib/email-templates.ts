@@ -121,13 +121,15 @@ export function staffAccountCreated(name: string, userId: string, role: string, 
 }
 
 // #7 — password reset link
-export function passwordReset(name: string | null | undefined, resetUrl: string): Mail {
+export function passwordReset(name: string | null | undefined, resetUrl: string, byAdmin = false): Mail {
   return layout({
     subject: "Reset your PMWIO password",
     heading: "Reset your password",
     intro: `Hi ${firstName(name)},`,
     body: [
-      "We received a request to reset the password for your account. Click the button below to choose a new one.",
+      byAdmin
+        ? "An administrator has started a password reset for your account. Click the button below to choose a new password."
+        : "We received a request to reset the password for your account. Click the button below to choose a new one.",
       "This link expires in 30 minutes and can be used once. If you didn't request this, you can safely ignore this email — your password will not change.",
     ],
     cta: { label: "Reset password", url: resetUrl },
@@ -593,6 +595,37 @@ export function broadcastMessage(d: { subject: string; message: string; ctaLabel
     intro: "Assalamu alaikum,",
     body: paragraphs,
     cta: d.ctaLabel && d.ctaUrl ? { label: d.ctaLabel, url: d.ctaUrl } : undefined,
+  });
+}
+
+// #44 — member, an administrator set a new password for their account. By
+// default it only says the password changed (the admin passes it on directly);
+// when the admin chooses to email the details, the User ID and new password
+// are included.
+export function passwordChangedByAdmin(
+  name: string | null | undefined,
+  credentials?: { userId: string; password: string },
+): Mail {
+  return layout({
+    subject: "Your PMWIO password was changed by an administrator",
+    heading: "Your password was changed",
+    intro: `Hi ${firstName(name)},`,
+    body: credentials
+      ? [
+          "An administrator has set a new password for your PMWIO account. Your login details are below.",
+          "Please log in and choose your own password from your profile, and delete this email afterwards.",
+        ]
+      : [
+          "An administrator has set a new password for your PMWIO account. They will share it with you directly.",
+          "Once you've logged in, please choose your own password from your profile. If you weren't expecting this, contact the organization.",
+        ],
+    facts: credentials
+      ? [
+          { label: "User ID", value: credentials.userId },
+          { label: "New password", value: credentials.password },
+        ]
+      : undefined,
+    cta: { label: "Log in", url: link("/login") },
   });
 }
 

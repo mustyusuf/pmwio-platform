@@ -8,8 +8,9 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { saveUpload } from "@/lib/uploads";
-import { send, link, isEmailConfigured } from "@/lib/email";
+import { send, isEmailConfigured } from "@/lib/email";
 import { passwordReset, passwordChanged } from "@/lib/email-templates";
+import { createPasswordResetLink } from "@/lib/password-reset";
 
 export type ProfileState = { ok?: boolean; error?: string; message?: string } | null;
 
@@ -94,15 +95,9 @@ export async function requestPasswordReset(_prev: ResetRequestState, formData: F
     return { ok: true };
   }
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  await prisma.passwordReset.create({
-    data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 1000 * 60 * 30) }, // 30 min
-  });
-
   // Email #7 (password reset link). If email isn't configured, fall back to
   // surfacing the link on-screen so the flow still works in development.
-  const resetUrl = link(`/reset-password?token=${token}`);
+  const resetUrl = await createPasswordResetLink(user.id);
   await send(user.email, passwordReset(user.name, resetUrl));
   return isEmailConfigured() ? { ok: true } : { ok: true, resetUrl };
 }

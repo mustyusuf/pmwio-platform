@@ -124,3 +124,11 @@ export function isStaff(role: string): boolean {
     role === ROLES.FINANCE
   );
 }
+
+/**
+ * Accounts an administrator may set or reset the password for. Administrators
+ * and Executives are excluded (so an admin can't take over a more powerful
+ * account), as are the Board and Finance roles, which approve and pay out
+ * money — those people reset their own password via "Forgot password".
+ */
+export const ADMIN_PASSWORD_MANAGEABLE_ROLES: string[] = [ROLES.MEMBER, ROLES.BENEFICIARY, ROLES.COORDINATOR];

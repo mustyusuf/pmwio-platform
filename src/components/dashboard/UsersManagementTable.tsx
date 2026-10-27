@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { setUserActive } from "@/app/actions/workflow";
 import { ChangeRoleButton } from "./ChangeRoleButton";
 import { DeleteUserButton } from "./DeleteUserButton";
-import { ROLE_LABEL } from "@/lib/roles";
+import { ManagePasswordButton } from "./ManagePasswordButton";
+import { ADMIN_PASSWORD_MANAGEABLE_ROLES, ROLE_LABEL } from "@/lib/roles";
 import { formatDate } from "@/lib/format";
 
 export type UserRow = {
@@ -91,6 +92,7 @@ export function UsersManagementTable({ rows, selfId }: { rows: UserRow[]; selfId
                         <input type="hidden" name="active" value={(!u.active).toString()} />
                         <button className="text-xs font-semibold text-brand-700 hover:text-brand-900">{u.active ? "Disable" : "Enable"}</button>
                       </form>
+                      {ADMIN_PASSWORD_MANAGEABLE_ROLES.includes(u.role) && <ManagePasswordButton userId={u.id} name={u.name} />}
                       <ChangeRoleButton userId={u.id} name={u.name} currentRole={u.role} currentStates={u.states} />
                       <DeleteUserButton userId={u.id} name={u.name} role={ROLE_LABEL[u.role] ?? u.role} />
                     </div>
