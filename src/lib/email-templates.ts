@@ -472,13 +472,14 @@ export function donationAlert(d: {
   donorName: string;
   amount: number;
   reference: string;
-  kind: "general" | "campaign" | "monthly-first" | "monthly";
+  kind: "general" | "campaign" | "member" | "monthly-first" | "monthly";
   campaign?: string | null;
   message?: string | null;
 }): Mail {
   const what = {
     general: "General donation",
     campaign: `Campaign donation${d.campaign ? ` — ${d.campaign}` : ""}`,
+    member: "Member contribution (one-time)",
     "monthly-first": "New monthly contributor (first payment)",
     monthly: "Monthly contribution (renewal)",
   }[d.kind];

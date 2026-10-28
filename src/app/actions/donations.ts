@@ -9,7 +9,6 @@ import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
 import {
   appUrl,
-  createPaystackPlan,
   initializePaystackTransaction,
 } from "@/lib/paystack";
 
@@ -101,47 +100,20 @@ export async function startPublicDonation(formData: FormData) {
 }
 
 const contributionSchema = z.object({
-  amount: z.coerce.number().min(500, "The minimum monthly contribution is ₦500."),
+  amount: z.coerce.number().min(500, "The minimum contribution is ₦500."),
 });
 
+// A member's contribution is a one-time payment on the same Paystack checkout
+// visitors get (every payment method). We deliberately don't set up automatic
+// monthly deductions.
 export async function startMonthlyContribution(formData: FormData) {
   const member = await getCurrentUser();
   if (!member || member.role !== ROLES.MEMBER) redirect("/dashboard");
 
   const parsed = contributionSchema.safeParse({ amount: formData.get("amount") });
   if (!parsed.success) errorRedirect("/dashboard/contributions", parsed.error.issues[0]?.message ?? "Enter an amount.");
-  const amount = parsed.data.amount;
-  const amountKobo = Math.round(amount * 100);
+  const { amount } = parsed.data;
 
-  const current = await prisma.contributionSubscription.findUnique({ where: { memberId: member.id } });
-  if (current?.status === "ACTIVE") {
-    errorRedirect("/dashboard/contributions", "You already have an active monthly contribution.");
-  }
-
-  let plan = await prisma.contributionPlan.findUnique({ where: { amountKobo } });
-  if (!plan) {
-    try {
-      const created = await createPaystackPlan(amountKobo);
-      plan = await prisma.contributionPlan.create({
-        data: { amountKobo, paystackPlanCode: created.plan_code },
-      });
-    } catch (error) {
-      errorRedirect("/dashboard/contributions", error instanceof Error ? error.message : "Unable to create contribution plan.");
-    }
-  }
-
-  const subscription = await prisma.contributionSubscription.upsert({
-    where: { memberId: member.id },
-    create: { memberId: member.id, planId: plan.id, amount, status: "PENDING" },
-    update: {
-      planId: plan.id,
-      amount,
-      status: "PENDING",
-      paystackSubscriptionCode: null,
-      nextPaymentAt: null,
-      lastPaymentAt: null, // a restarted contribution begins afresh
-    },
-  });
   const ref = reference("MEM");
   const donation = await prisma.donation.create({
     data: {
@@ -152,7 +124,6 @@ export async function startMonthlyContribution(formData: FormData) {
       donorEmail: member.email,
       donorPhone: member.phone,
       memberId: member.id,
-      subscriptionId: subscription.id,
     },
   });
 
@@ -160,17 +131,13 @@ export async function startMonthlyContribution(formData: FormData) {
   try {
     const initialized = await initializePaystackTransaction({
       email: member.email,
-      // Paystack requires the first-charge amount even when a plan is attached;
-      // it must match the plan amount so the initial charge and subscription agree.
-      amountKobo,
+      amountKobo: Math.round(amount * 100),
       reference: ref,
       callbackUrl: `${appUrl()}/api/paystack/callback`,
-      planCode: plan.paystackPlanCode,
       metadata: {
         donationId: donation.id,
         donationType: "MEMBER_CONTRIBUTION",
         memberId: member.id,
-        subscriptionId: subscription.id,
       },
     });
     authorizationUrl = initialized.authorization_url;

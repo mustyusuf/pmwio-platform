@@ -35,37 +35,35 @@ export default async function ContributionsPage({
 
   return (
     <>
-      <PageHeader title="Monthly contributions" subtitle="Set up and track your recurring support to PMWIO." />
-      {payment === "success" && <p className="mb-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Your contribution was received and your monthly plan is being activated.</p>}
+      <PageHeader title="Monthly contributions" subtitle="Pay your contribution and track your support to PMWIO." />
+      {payment === "success" && <p className="mb-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Thank you. Your contribution was received.</p>}
       {payment === "pending" && <p className="mb-5 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Paystack is still confirming this contribution.</p>}
       {payment === "failed" && <p className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">That payment wasn&apos;t completed, so you have not been charged. Please try again.</p>}
       {error && <p className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Total contributed" value={formatMoney(total)} accent />
         <StatCard label="Successful payments" value={successful.length} />
-        <StatCard label="Monthly amount" value={subscription ? formatMoney(subscription.amount) : "—"} />
-        <StatCard label="Plan status" value={subscription?.status.replaceAll("_", " ") ?? "Not set up"} />
+        <StatCard label="Last payment" value={successful[0] ? formatDate(successful[0].paidAt ?? successful[0].createdAt) : "—"} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
-        <Panel title={subscription?.status === "ACTIVE" ? "Your active contribution" : "Start monthly contribution"}>
-          {subscription?.status === "ACTIVE" ? (
-            <div className="space-y-3 text-sm text-brand-900/70">
-              <p>Paystack will charge <strong className="text-brand-900">{formatMoney(subscription.amount)}</strong> every month using the payment authorization you provided.</p>
+        <Panel title="Make a contribution">
+          <form action={startMonthlyContribution} className="space-y-4">
+            <p className="text-sm text-brand-900/65">You will pay on the same secure Paystack page as every donor, with card, bank transfer, USSD and more. Nothing is deducted automatically; come back each month to pay again.</p>
+            <div>
+              <label htmlFor="amount" className="block text-sm font-medium text-brand-900">Amount (₦)</label>
+              <input id="amount" name="amount" type="number" min="500" step="500" defaultValue={5000} required className="mt-1.5 w-full rounded-xl border border-brand-200 px-4 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200" />
+            </div>
+            <SubmitButton pendingText="Opening Paystack…">Pay with Paystack</SubmitButton>
+          </form>
+          {subscription?.status === "ACTIVE" && (
+            <div className="mt-5 space-y-2 border-t border-brand-100 pt-4 text-sm text-brand-900/70">
+              <p>You have an older automatic contribution: Paystack charges <strong className="text-brand-900">{formatMoney(subscription.amount)}</strong> every month.</p>
               {subscription.lastPaymentAt && <p>Last payment: <strong>{formatDate(subscription.lastPaymentAt)}</strong></p>}
               {subscription.nextPaymentAt && <p>Next expected payment: <strong>{formatDate(subscription.nextPaymentAt)}</strong></p>}
-              <p className="rounded-xl bg-brand-50 p-3 text-xs">To cancel or change an active subscription, contact an administrator while subscription management controls are being reviewed.</p>
+              <p className="rounded-xl bg-brand-50 p-3 text-xs">To cancel or change an automatic contribution, contact an administrator.</p>
             </div>
-          ) : (
-            <form action={startMonthlyContribution} className="space-y-4">
-              <p className="text-sm text-brand-900/65">Choose the amount you want to contribute each month. You will complete the first payment on Paystack, which authorizes future monthly charges.</p>
-              <div>
-                <label htmlFor="amount" className="block text-sm font-medium text-brand-900">Monthly amount (₦)</label>
-                <input id="amount" name="amount" type="number" min="500" step="500" defaultValue="5000" required className="mt-1.5 w-full rounded-xl border border-brand-200 px-4 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200" />
-              </div>
-              <SubmitButton pendingText="Opening Paystack…">Start monthly contribution</SubmitButton>
-            </form>
           )}
         </Panel>
 

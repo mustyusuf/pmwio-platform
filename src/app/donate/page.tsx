@@ -8,6 +8,7 @@ import { MarketingHero } from "@/components/MarketingHero";
 import { DonationForm } from "@/components/forms/DonationForm";
 import { formatMoney } from "@/lib/format";
 import { loadSiteContent } from "@/lib/content-store";
+import { getCurrentUser } from "@/lib/session";
 
 // Reads donation campaigns from the database, so render at request time rather
 // than statically at build time (the DB does not exist during the Docker build).
@@ -25,6 +26,7 @@ export default async function DonatePage({
 }) {
   const { error, payment } = await searchParams;
   const sc = await loadSiteContent();
+  const user = await getCurrentUser();
   const now = new Date();
   const campaigns = await prisma.donationCampaign.findMany({
     where: {
@@ -59,14 +61,14 @@ export default async function DonatePage({
             <ul className="mt-6 space-y-3 text-sm text-brand-900/70">
               <li>• Secure payment through Paystack</li>
               <li>• Instant payment confirmation</li>
-              <li>• Members can set up monthly contributions from their dashboard</li>
+              <li>• Members can pay their monthly contribution from their dashboard</li>
             </ul>
           </div>
           <div className="rounded-3xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">
             {payment === "success" && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Thank you. Your donation was received successfully.</p>}
             {payment === "pending" && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Your payment is being confirmed. The donation record will update shortly.</p>}
             {payment === "failed" && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">That payment wasn&apos;t completed, so you have not been charged. Please try again.</p>}
-            <DonationForm returnPath="/donate" error={error} />
+            <DonationForm returnPath="/donate" error={error} defaults={user ?? undefined} />
           </div>
         </section>
 

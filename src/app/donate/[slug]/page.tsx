@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { MarketingHero } from "@/components/MarketingHero";
 import { DonationForm } from "@/components/forms/DonationForm";
 import { formatMoney } from "@/lib/format";
+import { getCurrentUser } from "@/lib/session";
 
 // Reads a donation campaign from the database, so render at request time rather
 // than statically at build time (the DB does not exist during the Docker build).
@@ -25,7 +26,8 @@ export default async function CampaignDonationPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { slug } = await params;
-  const { error } = await searchParams;
+  const user = await getCurrentUser();
+  const { error } =await searchParams;
   const now = new Date();
   const campaign = await prisma.donationCampaign.findFirst({
     where: {
@@ -68,6 +70,7 @@ export default async function CampaignDonationPage({
             campaign={{ id: campaign.id, title: campaign.title, suggestedAmount: campaign.suggestedAmount }}
             returnPath={`/donate/${campaign.slug}`}
             error={error}
+            defaults={user ?? undefined}
           />
         </div>
       </main>

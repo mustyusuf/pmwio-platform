@@ -9,10 +9,12 @@ export function DonationForm({
   campaign,
   returnPath,
   error,
+  defaults,
 }: {
   campaign?: { id: string; title: string; suggestedAmount: number | null };
   returnPath: string;
   error?: string;
+  defaults?: { name?: string | null; email?: string | null; phone?: string | null };
 }) {
   return (
     <form action={startPublicDonation} className="space-y-4">
@@ -26,17 +28,17 @@ export function DonationForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor={`name-${campaign?.id ?? "general"}`} className={label}>Full name</label>
-          <input id={`name-${campaign?.id ?? "general"}`} name="name" required className={input} autoComplete="name" />
+          <input id={`name-${campaign?.id ?? "general"}`} name="name" required defaultValue={defaults?.name ?? undefined} className={input} autoComplete="name" />
         </div>
         <div>
           <label htmlFor={`email-${campaign?.id ?? "general"}`} className={label}>Email address</label>
-          <input id={`email-${campaign?.id ?? "general"}`} name="email" type="email" required className={input} autoComplete="email" />
+          <input id={`email-${campaign?.id ?? "general"}`} name="email" type="email" required defaultValue={defaults?.email ?? undefined} className={input} autoComplete="email" />
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor={`phone-${campaign?.id ?? "general"}`} className={label}>Phone <span className="text-brand-900/40">(optional)</span></label>
-          <input id={`phone-${campaign?.id ?? "general"}`} name="phone" className={input} autoComplete="tel" />
+          <input id={`phone-${campaign?.id ?? "general"}`} name="phone" defaultValue={defaults?.phone ?? undefined} className={input} autoComplete="tel" />
         </div>
         <div>
           <label htmlFor={`amount-${campaign?.id ?? "general"}`} className={label}>Amount (₦)</label>

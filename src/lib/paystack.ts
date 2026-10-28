@@ -130,6 +130,7 @@ type SuccessEmailInput = {
   amount: number;
   reference: string;
   type: string; // GENERAL | CAMPAIGN | MEMBER_CONTRIBUTION
+  recurring?: boolean; // part of a monthly subscription (a member's one-time payment isn't)
   campaign?: string | null;
   message?: string | null;
   firstContribution?: boolean;
@@ -143,7 +144,7 @@ type SuccessEmailInput = {
  */
 async function sendDonationEmails(d: SuccessEmailInput) {
   const name = d.donorName ?? "Supporter";
-  const recurring = d.type === "MEMBER_CONTRIBUTION";
+  const recurring = d.type === "MEMBER_CONTRIBUTION" && Boolean(d.recurring);
   if (d.donorEmail) {
     await send(
       d.donorEmail,
@@ -163,7 +164,10 @@ async function sendDonationEmails(d: SuccessEmailInput) {
       donorName: name,
       amount: d.amount,
       reference: d.reference,
-      kind: recurring ? (d.firstContribution ? "monthly-first" : "monthly") : d.type === "CAMPAIGN" ? "campaign" : "general",
+      kind: recurring
+        ? d.firstContribution ? "monthly-first" : "monthly"
+        : d.type === "MEMBER_CONTRIBUTION" ? "member"
+        : d.type === "CAMPAIGN" ? "campaign" : "general",
       campaign: d.campaign,
       message: d.message,
     }),
@@ -226,6 +230,7 @@ export async function recordSuccessfulCharge(data: PaystackTransaction) {
       amount: existing.amount,
       reference: existing.reference,
       type: existing.type,
+      recurring: Boolean(subscription),
       campaign: existing.campaign?.title,
       message: existing.message,
       firstContribution: subscription ? !subscription.lastPaymentAt : false,
@@ -293,6 +298,7 @@ export async function recordSuccessfulCharge(data: PaystackTransaction) {
     amount: data.amount / 100,
     reference: data.reference,
     type: "MEMBER_CONTRIBUTION",
+    recurring: true,
     firstContribution: !subscription.lastPaymentAt,
     nextPaymentAt,
   });
