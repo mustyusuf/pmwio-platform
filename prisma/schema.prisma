@@ -51,6 +51,7 @@ model User {
   recitations              Recitation[]
   archiveItems             ArchiveItem[]              @relation("ArchiveCreator")
   broadcasts               Broadcast[]               @relation("BroadcastSender")
+  emailCampaigns           EmailCampaign[]           @relation("EmailCampaignSender")
 }
 
 /// A beneficiary's request for support. Moves through a multi-stage workflow:
@@ -521,4 +522,43 @@ model Broadcast {
   sentById       String?
   sentBy         User?    @relation("BroadcastSender", fields: [sentById], references: [id])
   createdAt      DateTime @default(now())
+}
+
+/// One email send (a bcc blast to many members, or a set of personal emails),
+/// kept so admins can follow up on delivery — see src/lib/email-tracking.ts.
+model EmailCampaign {
+  id            String          @id @default(cuid())
+  kind          String // VERSE_LIVE | MONTHLY_RECAP | MONTHLY_CONGRATS | BROADCAST
+  label         String // what it was about, e.g. "Al-Baqarah 2:255" or "October 2026"
+  refId         String? // the verse id, for VERSE_LIVE
+  subject       String
+  html          String // shared content for retries; empty when each delivery has its own
+  text          String
+  total         Int
+  sent          Int
+  failed        Int
+  triggeredById String?
+  triggeredBy   User?           @relation("EmailCampaignSender", fields: [triggeredById], references: [id], onDelete: SetNull)
+  createdAt     DateTime        @default(now())
+  deliveries    EmailDelivery[]
+
+  @@index([kind, refId])
+  @@index([createdAt])
+}
+
+/// One recipient of an EmailCampaign. SENT means the mail server accepted the
+/// message for that address (a later bounce isn't visible to us).
+model EmailDelivery {
+  id         String        @id @default(cuid())
+  campaignId String
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email      String
+  name       String?
+  status     String // SENT | FAILED
+  error      String?
+  attempts   Int           @default(1)
+  payload    String? // JSON {subject, html, text} when this recipient's email is personal
+  updatedAt  DateTime      @updatedAt
+
+  @@index([campaignId, status])
 }

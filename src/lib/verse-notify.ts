@@ -1,7 +1,27 @@
 import { prisma } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
-import { sendEmail, recipientsByRole, orgEmailAddress } from "@/lib/email";
+import { sendTrackedBulk } from "@/lib/email-tracking";
 import { weeklyVerseLive } from "@/lib/email-templates";
+
+/**
+ * Emails every active member that a verse is open for recitation (#35),
+ * recording each recipient's result in the delivery log. Used by the
+ * automatic announcement and by the admin's manual "Email members" button.
+ */
+export async function emailVerseToMembers(verse: { id: string; reference: string; translation: string }, triggeredById?: string) {
+  const members = await prisma.user.findMany({
+    where: { active: true, role: ROLES.MEMBER },
+    select: { email: true, name: true },
+  });
+  return sendTrackedBulk({
+    kind: "VERSE_LIVE",
+    label: verse.reference,
+    refId: verse.id,
+    triggeredById,
+    mail: weeklyVerseLive(verse.reference, verse.translation),
+    recipients: members,
+  });
+}
 
 /**
  * Tells every active member (in-app notification + bcc email) that the
@@ -42,9 +62,6 @@ export async function notifyMembersOfLiveVerse(): Promise<string | null> {
   }
 
   // Email #35 — bcc broadcast so members don't see each other's addresses.
-  const emails = await recipientsByRole([ROLES.MEMBER]);
-  if (emails.length > 0) {
-    await sendEmail({ to: orgEmailAddress(), bcc: emails, ...weeklyVerseLive(live.reference, live.translation) });
-  }
+  await emailVerseToMembers(live);
   return live.reference;
 }

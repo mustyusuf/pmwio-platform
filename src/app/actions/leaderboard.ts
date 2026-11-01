@@ -33,7 +33,7 @@ export async function resendMonthlyRecap(_prev: ResendRecapState, formData: Form
   const end = new Date(year, monthIndex + 1, 1);
   const label = start.toLocaleString("en-GB", { month: "long", year: "numeric" });
 
-  const count = await sendMonthlyRecap(start, end);
+  const count = await sendMonthlyRecap(start, end, me.id);
   await prisma.activityLog.create({
     data: {
       userId: me.id,

@@ -10,8 +10,8 @@ import { ROLES } from "@/lib/roles";
 import { saveAudioUpload, downloadAudio } from "@/lib/uploads";
 import { getSurah, audioUrl, verseReference, fetchVerseText } from "@/lib/quran-source";
 import { getMemberStanding } from "@/lib/leaderboard";
-import { notifyMembersOfLiveVerse } from "@/lib/verse-notify";
-import { send } from "@/lib/email";
+import { emailVerseToMembers, notifyMembersOfLiveVerse } from "@/lib/verse-notify";
+import { isEmailConfigured, send } from "@/lib/email";
 import { recitationReceived } from "@/lib/email-templates";
 
 export type VerseState = { ok?: boolean; error?: string } | null;
@@ -144,6 +144,52 @@ export async function togglePublishVerse(formData: FormData) {
   });
   if (publish) await notifyMembersOfLiveVerse();
   revalidateQuran();
+}
+
+export type EmailVerseState = { ok?: boolean; warning?: boolean; error?: string; message?: string } | null;
+
+/**
+ * Manually emails the current week's verse to every active member. For when
+ * the automatic announcement was missed or failed (late upload, SMTP trouble).
+ * Safe to press again: a verse that was never announced goes through the normal
+ * announcement (in-app notification + email); an already-announced one is
+ * re-emailed only. Every send lands in the delivery log.
+ */
+export async function emailVerseToAllMembers(_prev: EmailVerseState, formData: FormData): Promise<EmailVerseState> {
+  const me = await requireAdmin();
+  const verse = await prisma.verse.findUnique({ where: { id: String(formData.get("id")) } });
+  if (!verse) return { error: "That verse no longer exists." };
+  if (!verse.publishedAt) return { error: "Publish the verse first — members can't see it yet." };
+  const live = await prisma.verse.findFirst({
+    where: { publishedAt: { not: null }, weekOf: { lte: new Date() } },
+    orderBy: { weekOf: "desc" },
+    select: { id: true },
+  });
+  if (live?.id !== verse.id) return { error: "Only the current week's verse can be emailed to members." };
+  if (!isEmailConfigured()) return { error: "Email isn't set up on this server (SMTP settings are missing), so nothing can be sent." };
+
+  let campaignId: string | undefined;
+  if (!verse.notifiedAt) {
+    await notifyMembersOfLiveVerse();
+    campaignId = (await prisma.emailCampaign.findFirst({ where: { kind: "VERSE_LIVE", refId: verse.id }, orderBy: { createdAt: "desc" }, select: { id: true } }))?.id;
+  }
+  const summary = campaignId
+    ? await prisma.emailCampaign.findUnique({ where: { id: campaignId }, select: { id: true, total: true, sent: true, failed: true } })
+    : await emailVerseToMembers(verse, me.id);
+  if (!summary) return { error: "There are no active members to email." };
+
+  await prisma.activityLog.create({
+    data: { userId: me.id, action: "VERSE_EMAILED", detail: `${verse.reference} — ${summary.sent} of ${summary.total} delivered` },
+  });
+  revalidateQuran();
+  revalidatePath("/dashboard/email-log");
+  return {
+    ok: summary.failed === 0,
+    warning: summary.failed > 0,
+    message: summary.failed === 0
+      ? `Emailed ${summary.sent} member${summary.sent === 1 ? "" : "s"}.`
+      : `Emailed ${summary.sent} of ${summary.total} members — ${summary.failed} failed. See the delivery log to retry.`,
+  };
 }
 
 export async function deleteVerse(formData: FormData) {

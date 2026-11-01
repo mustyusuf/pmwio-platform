@@ -65,27 +65,41 @@ type SendArgs = {
   bcc?: string[];
 };
 
-/** Send one email over SMTP (bcc lists are split into batches). Never throws. */
-export async function sendEmail({ to, subject, html, text, replyTo, bcc }: SendArgs): Promise<boolean> {
-  const recipients = (Array.isArray(to) ? to : [to])
-    .map((r) => r?.trim())
-    .filter((r): r is string => Boolean(r));
-  if (recipients.length === 0) return false;
-  const bccRecipients = bcc?.map((r) => r?.trim()).filter((r): r is string => Boolean(r)) ?? [];
+export type DeliveryOutcome = { ok: boolean; error?: string };
 
+const NOT_CONFIGURED = "Email isn't set up on this server (SMTP settings are missing).";
+
+const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 300);
+const addressOf = (a: string | { address?: string }) => (typeof a === "string" ? a : a.address ?? "").trim().toLowerCase();
+
+/**
+ * Sends one message (bcc lists are split into batches) and reports what the
+ * mail server said about each hidden recipient — or about `to` when there is
+ * no bcc. Never throws. This is the single place mail leaves the app; the
+ * delivery log (src/lib/email-tracking.ts) builds on the per-address result.
+ */
+export async function dispatchEmail({ to, subject, html, text, replyTo, bcc }: SendArgs) {
+  const recipients = (Array.isArray(to) ? to : [to]).map((r) => r?.trim()).filter((r): r is string => Boolean(r));
+  const bccRecipients = bcc?.map((r) => r?.trim()).filter((r): r is string => Boolean(r)) ?? [];
+  const outcomes = new Map<string, DeliveryOutcome>();
+  const tracked = bccRecipients.length > 0 ? bccRecipients : recipients;
+
+  if (recipients.length === 0) return { configured: true, threw: false, outcomes };
   if (!isEmailConfigured()) {
     console.warn(`[email] SMTP not configured — skipping "${subject}" to ${recipients.join(", ")}`);
-    return false;
+    for (const r of tracked) outcomes.set(r.toLowerCase(), { ok: false, error: NOT_CONFIGURED });
+    return { configured: false, threw: false, outcomes };
   }
 
   const batches: (string[] | undefined)[] = [];
   if (bccRecipients.length === 0) batches.push(undefined);
   for (let i = 0; i < bccRecipients.length; i += BCC_BATCH_SIZE) batches.push(bccRecipients.slice(i, i + BCC_BATCH_SIZE));
 
-  let ok = true;
+  let threw = false;
   for (const batch of batches) {
+    const members = (batch ?? recipients).map((r) => r.toLowerCase());
     try {
-      await transport().sendMail({
+      const info = await transport().sendMail({
         from: EMAIL_FROM,
         to: recipients,
         subject,
@@ -94,12 +108,24 @@ export async function sendEmail({ to, subject, html, text, replyTo, bcc }: SendA
         ...(replyTo ?? REPLY_TO ? { replyTo: replyTo ?? REPLY_TO } : {}),
         ...(batch?.length ? { bcc: batch } : {}),
       });
+      const rejected = new Set((info.rejected ?? []).map(addressOf));
+      for (const m of members) {
+        outcomes.set(m, rejected.has(m) ? { ok: false, error: "Rejected by the mail server (address refused)." } : { ok: true });
+      }
     } catch (err) {
       console.error(`[email] send failed for "${subject}":`, err);
-      ok = false;
+      threw = true;
+      for (const m of members) outcomes.set(m, { ok: false, error: errorText(err) });
     }
   }
-  return ok;
+  return { configured: true, threw, outcomes };
+}
+
+/** Send one email over SMTP (bcc lists are split into batches). Never throws. */
+export async function sendEmail(args: SendArgs): Promise<boolean> {
+  const result = await dispatchEmail(args);
+  const hasRecipients = (Array.isArray(args.to) ? args.to : [args.to]).some((r) => r?.trim());
+  return hasRecipients && result.configured && !result.threw;
 }
 
 /** Convenience: send a prepared template to one or more addresses. */

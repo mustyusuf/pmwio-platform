@@ -15,6 +15,7 @@ import {
   Images,
   ListChecks,
   LogOut,
+  Mail,
   Megaphone,
   Menu,
   Mic,
@@ -53,6 +54,7 @@ const SIDEBAR_ICONS = {
   archive: Archive,
   handshake: Handshake,
   megaphone: Megaphone,
+  mail: Mail,
 } satisfies Record<NavIcon, typeof House>;
 
 function Icon({ name }: { name: NavIcon }) {

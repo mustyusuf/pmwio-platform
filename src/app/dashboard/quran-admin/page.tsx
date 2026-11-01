@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Panel, formatDate } from "@/components/dashboard/ui";
 import { VerseCreateForm } from "@/components/dashboard/VerseForm";
 import { DeleteVerseButton } from "@/components/dashboard/DeleteVerseButton";
+import { EmailVerseButton } from "@/components/dashboard/EmailVerseButton";
+import { formatDateTime } from "@/lib/format";
 import { togglePublishVerse } from "@/app/actions/quran";
 
 export const metadata: Metadata = { title: "Weekly Verse" };
@@ -23,10 +25,20 @@ export default async function QuranAdminPage() {
   if (!user) redirect("/logout");
   if (user.role !== ROLES.ADMIN && user.role !== ROLES.EXECUTIVE) redirect("/dashboard");
 
-  const verses = await prisma.verse.findMany({
-    orderBy: { weekOf: "desc" },
-    include: { _count: { select: { recitations: true } } },
+  const [verses, memberCount] = await Promise.all([
+    prisma.verse.findMany({
+      orderBy: { weekOf: "desc" },
+      include: { _count: { select: { recitations: true } } },
+    }),
+    prisma.user.count({ where: { active: true, role: ROLES.MEMBER } }),
+  ]);
+  // Latest announcement email per verse, so the admin can see how it went.
+  const campaigns = await prisma.emailCampaign.findMany({
+    where: { kind: "VERSE_LIVE", refId: { in: verses.map((v) => v.id) } },
+    orderBy: { createdAt: "desc" },
   });
+  const lastEmail = new Map<string, (typeof campaigns)[number]>();
+  for (const c of campaigns) if (c.refId && !lastEmail.has(c.refId)) lastEmail.set(c.refId, c);
 
   // Verses are sorted by weekOf desc, so the first published one whose week
   // has begun is "Live" — everything published above it is "Scheduled" for
@@ -88,6 +100,16 @@ export default async function QuranAdminPage() {
                         <DeleteVerseButton id={v.id} recitationCount={v._count.recitations} />
                       </div>
                     </div>
+                    {status === "Live" && (
+                      <EmailVerseButton
+                        id={v.id}
+                        memberCount={memberCount}
+                        last={(() => {
+                          const c = lastEmail.get(v.id);
+                          return c ? { campaignId: c.id, sent: c.sent, failed: c.failed, total: c.total, when: formatDateTime(c.createdAt) } : null;
+                        })()}
+                      />
+                    )}
                     <audio controls src={`/api/verses/${v.id}/audio`} className="mt-3 w-full" />
                   </li>
                 );

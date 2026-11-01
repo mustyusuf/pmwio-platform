@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
@@ -56,7 +57,7 @@ export default async function QuranLeaderboardPage() {
       </Panel>
       {isAdmin && (
         <Panel title="Resend monthly recap">
-          <p className="mb-4 text-sm text-brand-900/60">Manually send the top-10 broadcast and congratulations emails for a given month.</p>
+          <p className="mb-4 text-sm text-brand-900/60">Manually send the top-10 email to all members and the congratulations email to the top 10 for a given month. <Link href="/dashboard/email-log" className="font-semibold text-brand-700 underline">See who received them</Link>.</p>
           <ResendRecapForm />
         </Panel>
       )}

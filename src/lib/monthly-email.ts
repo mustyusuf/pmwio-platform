@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { getMonthlyLeaderboard } from "@/lib/leaderboard";
-import { send, sendEmail, recipientsByRole, orgEmailAddress } from "@/lib/email";
+import { sendTrackedBulk, sendTrackedIndividual } from "@/lib/email-tracking";
 import { monthlyTopReciters, monthlyTopReciterCongrats } from "@/lib/email-templates";
 import { ROLES } from "@/lib/roles";
 
@@ -17,25 +17,35 @@ const monthLabel = (d: Date) => d.toLocaleString("en-GB", { month: "long", year:
  * config fails silently rather than throwing, same as every other email in
  * the app.
  */
-export async function sendMonthlyRecap(start: Date, end: Date): Promise<number> {
+export async function sendMonthlyRecap(start: Date, end: Date, triggeredById?: string): Promise<number> {
   const top10 = await getMonthlyLeaderboard(start, end, 10);
   if (top10.length === 0) return 0;
 
   const label = monthLabel(start);
-  const memberEmails = await recipientsByRole([ROLES.MEMBER]);
-  if (memberEmails.length > 0) {
-    await sendEmail({
-      to: orgEmailAddress(),
-      bcc: memberEmails,
-      ...monthlyTopReciters(label, top10.map((m) => ({ rank: m.rank, name: m.name, count: m.count }))),
-    });
-  }
+  const members = await prisma.user.findMany({ where: { active: true, role: ROLES.MEMBER }, select: { email: true, name: true } });
+  await sendTrackedBulk({
+    kind: "MONTHLY_RECAP",
+    label,
+    triggeredById,
+    mail: monthlyTopReciters(label, top10.map((m) => ({ rank: m.rank, name: m.name, count: m.count }))),
+    recipients: members,
+  });
 
-  for (const m of top10) {
-    const winner = await prisma.user.findUnique({ where: { id: m.memberId }, select: { email: true, name: true } });
-    if (!winner) continue;
-    await send(winner.email, monthlyTopReciterCongrats(winner.name, label, m.rank, m.count));
-  }
+  const winners = await prisma.user.findMany({
+    where: { id: { in: top10.map((m) => m.memberId) } },
+    select: { id: true, email: true, name: true },
+  });
+  const byId = new Map(winners.map((w) => [w.id, w]));
+  await sendTrackedIndividual({
+    kind: "MONTHLY_CONGRATS",
+    label,
+    subject: `Congratulations — you're in ${label}'s top 10`,
+    triggeredById,
+    items: top10.flatMap((m) => {
+      const winner = byId.get(m.memberId);
+      return winner ? [{ recipient: winner, mail: monthlyTopReciterCongrats(winner.name, label, m.rank, m.count) }] : [];
+    }),
+  });
 
   return top10.length;
 }

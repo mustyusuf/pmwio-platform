@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
-import { isEmailConfigured, orgEmailAddress, send, sendEmail } from "@/lib/email";
+import { isEmailConfigured, send } from "@/lib/email";
+import { sendTrackedBulk } from "@/lib/email-tracking";
 import { broadcastMessage } from "@/lib/email-templates";
 
 /** Every user category an admin can address, in the order shown on the page. */
@@ -49,12 +50,13 @@ export async function audienceCounts(): Promise<Record<string, number>> {
   return Object.fromEntries(grouped.map((g) => [g.role, g._count._all]));
 }
 
-async function recipientEmails(roles: string[]) {
+async function recipientList(roles: string[]) {
   const users = await prisma.user.findMany({
     where: { active: true, emailVerified: true, role: { in: roles } },
-    select: { email: true },
+    select: { email: true, name: true },
   });
-  return [...new Set(users.map((u) => u.email.trim().toLowerCase()).filter(Boolean))];
+  const seen = new Map(users.filter((u) => u.email.trim()).map((u) => [u.email.trim().toLowerCase(), { email: u.email.trim().toLowerCase(), name: u.name }]));
+  return [...seen.values()];
 }
 
 export function buildBroadcastMail(input: { subject: string; message: string; ctaLabel?: string; ctaUrl?: string }) {
@@ -79,10 +81,18 @@ export async function deliverBroadcast(input: z.output<typeof broadcastSchema>, 
   if (!isEmailConfigured()) {
     return { ok: false as const, error: "Email isn't set up on this server (SMTP settings are missing), so nothing was sent." };
   }
-  const emails = await recipientEmails(input.roles);
+  const recipients = await recipientList(input.roles);
+  const emails = recipients.map((r) => r.email);
   if (emails.length === 0) return { ok: false as const, error: "There are no active, email-confirmed users in the chosen groups." };
 
-  const delivered = await sendEmail({ to: orgEmailAddress(), bcc: emails, ...buildBroadcastMail(input) });
+  const summary = await sendTrackedBulk({
+    kind: "BROADCAST",
+    label: input.subject,
+    triggeredById: sender.id,
+    mail: buildBroadcastMail(input),
+    recipients,
+  });
+  const delivered = summary !== null && summary.failed === 0;
 
   await prisma.broadcast.create({
     data: {
