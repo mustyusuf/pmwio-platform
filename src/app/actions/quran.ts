@@ -11,6 +11,7 @@ import { saveAudioUpload, downloadAudio } from "@/lib/uploads";
 import { getSurah, audioUrl, verseReference, fetchVerseText } from "@/lib/quran-source";
 import { getMemberStanding } from "@/lib/leaderboard";
 import { emailVerseToMembers, notifyMembersOfLiveVerse } from "@/lib/verse-notify";
+import { emailReminderToPending } from "@/lib/verse-email";
 import { isEmailConfigured, send } from "@/lib/email";
 import { recitationReceived } from "@/lib/email-templates";
 
@@ -189,6 +190,40 @@ export async function emailVerseToAllMembers(_prev: EmailVerseState, formData: F
     message: summary.failed === 0
       ? `Emailed ${summary.sent} member${summary.sent === 1 ? "" : "s"}.`
       : `Emailed ${summary.sent} of ${summary.total} members — ${summary.failed} failed. See the delivery log to retry.`,
+  };
+}
+
+/**
+ * Manually sends the "submit your recitation" reminder to every active member
+ * who hasn't recited the current week's verse yet. Doesn't use up one of the
+ * three scheduled reminders. Every send lands in the delivery log.
+ */
+export async function emailReminderToPendingMembers(_prev: EmailVerseState, formData: FormData): Promise<EmailVerseState> {
+  const me = await requireAdmin();
+  const verse = await prisma.verse.findUnique({ where: { id: String(formData.get("id")) } });
+  if (!verse) return { error: "That verse no longer exists." };
+  const live = await prisma.verse.findFirst({
+    where: { publishedAt: { not: null }, weekOf: { lte: new Date() } },
+    orderBy: { weekOf: "desc" },
+    select: { id: true },
+  });
+  if (!verse.publishedAt || live?.id !== verse.id) return { error: "Reminders can only be sent for the current week's verse." };
+  if (!isEmailConfigured()) return { error: "Email isn't set up on this server (SMTP settings are missing), so nothing can be sent." };
+
+  const summary = await emailReminderToPending(verse, me.id);
+  if (!summary) return { error: "Every active member has already submitted — nobody needs a reminder." };
+
+  await prisma.activityLog.create({
+    data: { userId: me.id, action: "VERSE_REMINDER_SENT", detail: `${verse.reference} — ${summary.sent} of ${summary.total} delivered` },
+  });
+  revalidateQuran();
+  revalidatePath("/dashboard/email-log");
+  return {
+    ok: summary.failed === 0,
+    warning: summary.failed > 0,
+    message: summary.failed === 0
+      ? `Reminded ${summary.sent} member${summary.sent === 1 ? "" : "s"} who haven't submitted.`
+      : `Reminded ${summary.sent} of ${summary.total} members — ${summary.failed} failed. See the delivery log to retry.`,
   };
 }
 

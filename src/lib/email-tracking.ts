@@ -10,10 +10,11 @@ import { dispatchEmail, orgEmailAddress, type DeliveryOutcome, type Mail } from 
 // bounce or a spam-folder landing happens after that and isn't visible to us.
 // ---------------------------------------------------------------------------
 
-export type CampaignKind = "VERSE_LIVE" | "MONTHLY_RECAP" | "MONTHLY_CONGRATS" | "BROADCAST";
+export type CampaignKind = "VERSE_LIVE" | "VERSE_REMINDER" | "MONTHLY_RECAP" | "MONTHLY_CONGRATS" | "BROADCAST";
 
 export const CAMPAIGN_KIND_LABEL: Record<string, string> = {
   VERSE_LIVE: "Weekly verse announcement",
+  VERSE_REMINDER: "Weekly verse reminder",
   MONTHLY_RECAP: "Monthly top 10 (all members)",
   MONTHLY_CONGRATS: "Top 10 congratulations",
   BROADCAST: "Broadcast",
@@ -114,10 +115,21 @@ export async function sendTrackedIndividual(
 }
 
 /** Tries again for every recipient of a campaign whose email failed. */
-export async function retryFailedDeliveries(campaignId: string): Promise<{ retried: number; sent: number } | null> {
+export async function retryFailedDeliveries(
+  campaignId: string,
+  /** For automatic retries: skip recipients already tried this many times or tried too recently. */
+  limits?: { maxAttempts: number; notTriedSince: Date },
+): Promise<{ retried: number; sent: number } | null> {
   const campaign = await prisma.emailCampaign.findUnique({
     where: { id: campaignId },
-    include: { deliveries: { where: { status: "FAILED" } } },
+    include: {
+      deliveries: {
+        where: {
+          status: "FAILED",
+          ...(limits ? { attempts: { lt: limits.maxAttempts }, updatedAt: { lt: limits.notTriedSince } } : {}),
+        },
+      },
+    },
   });
   if (!campaign) return null;
   const failed = campaign.deliveries;
@@ -151,4 +163,30 @@ export async function retryFailedDeliveries(campaignId: string): Promise<{ retri
   ]);
   await prisma.emailCampaign.update({ where: { id: campaignId }, data: { sent, failed: failedNow } });
   return { retried: failed.length, sent: failed.filter((d) => outcomes.get(d.email)?.ok).length };
+}
+
+const AUTO_RETRY_KINDS = ["VERSE_LIVE", "VERSE_REMINDER"];
+const AUTO_RETRY_MAX_ATTEMPTS = 3; // the first send counts as attempt 1
+const AUTO_RETRY_MIN_GAP_MS = 30 * 60 * 1000;
+const AUTO_RETRY_WINDOW_MS = 24 * 3600 * 1000;
+
+/**
+ * Re-sends the member-facing Qur'an emails to anyone they failed for (a mail
+ * host that was briefly down or over its hourly limit), so a hiccup doesn't
+ * silently cost members their announcement or reminder. Each recipient gets
+ * a couple of tries, spaced out, within a day of the original send; after
+ * that an admin can still retry from the Email Delivery page.
+ */
+export async function retryRecentFailures() {
+  const campaigns = await prisma.emailCampaign.findMany({
+    where: {
+      kind: { in: AUTO_RETRY_KINDS },
+      failed: { gt: 0 },
+      createdAt: { gt: new Date(Date.now() - AUTO_RETRY_WINDOW_MS) },
+    },
+    select: { id: true },
+  });
+  for (const { id } of campaigns) {
+    await retryFailedDeliveries(id, { maxAttempts: AUTO_RETRY_MAX_ATTEMPTS, notTriedSince: new Date(Date.now() - AUTO_RETRY_MIN_GAP_MS) });
+  }
 }

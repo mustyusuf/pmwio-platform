@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { sendEmail, orgEmailAddress } from "@/lib/email";
+import { sendTrackedBulk } from "@/lib/email-tracking";
 import { weeklyVerseReminder } from "@/lib/email-templates";
 import { ROLES } from "@/lib/roles";
 import { isSameLagosDay, lagosDaysBetween } from "@/lib/timezone";
@@ -9,6 +9,27 @@ import { isSameLagosDay, lagosDaysBetween } from "@/lib/timezone";
 // chance before the week closes. Index in this array doubles as the
 // Verse.reminderCount value that's "due" for that offset.
 const REMINDER_DAY_OFFSETS = [2, 4, 6];
+
+/**
+ * Emails the "submit your recitation" reminder (#37) to every active member
+ * who hasn't submitted this verse yet, recording each recipient's result in
+ * the delivery log. Used by the scheduled reminders and the admin's manual
+ * "Send reminder now" button. Returns null when nobody is outstanding.
+ */
+export async function emailReminderToPending(verse: { id: string; reference: string }, triggeredById?: string) {
+  const pending = await prisma.user.findMany({
+    where: { role: ROLES.MEMBER, active: true, recitations: { none: { verseId: verse.id } } },
+    select: { email: true, name: true },
+  });
+  return sendTrackedBulk({
+    kind: "VERSE_REMINDER",
+    label: verse.reference,
+    refId: verse.id,
+    triggeredById,
+    mail: weeklyVerseReminder(verse.reference),
+    recipients: pending,
+  });
+}
 
 /**
  * Nudges members who haven't yet submitted a recitation for the current
@@ -31,17 +52,7 @@ export async function checkAndSendReminders(): Promise<void> {
   const daysIn = lagosDaysBetween(verse.weekOf);
   if (daysIn < REMINDER_DAY_OFFSETS[verse.reminderCount]) return;
 
-  const pending = await prisma.user.findMany({
-    where: { role: ROLES.MEMBER, active: true, recitations: { none: { verseId: verse.id } } },
-    select: { email: true },
-  });
-  if (pending.length > 0) {
-    await sendEmail({
-      to: orgEmailAddress(),
-      bcc: pending.map((u) => u.email),
-      ...weeklyVerseReminder(verse.reference),
-    });
-  }
+  await emailReminderToPending(verse);
   await prisma.verse.update({
     where: { id: verse.id },
     data: { reminderCount: { increment: 1 }, lastReminderSentAt: new Date() },
