@@ -7,6 +7,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
+import { allowFromIp, TOO_MANY } from "@/lib/rate-limit";
 import {
   appUrl,
   initializePaystackTransaction,
@@ -25,12 +26,21 @@ const publicDonationSchema = z.object({
   name: z.string().trim().min(2, "Please enter your name."),
   email: z.email("Enter a valid email address.").toLowerCase(),
   phone: z.string().trim().optional(),
-  amount: z.coerce.number().min(100, "The minimum donation is ₦100."),
+  amount: z.coerce.number().min(100, "The minimum donation is ₦100.").max(100_000_000, "That amount is too large."),
   message: z.string().trim().max(500).optional(),
   anonymous: z.boolean(),
 });
 
+// Where to send the donor back to on an error. Only our own donate pages are
+// allowed — a value like "//evil.example" would otherwise make this an open redirect.
+function safeReturnPath(value: FormDataEntryValue | null) {
+  const path = String(value ?? "");
+  return /^\/donate(\/[a-z0-9-]+)?$/.test(path) ? path : "/donate";
+}
+
 export async function startPublicDonation(formData: FormData) {
+  const returnPath = safeReturnPath(formData.get("returnPath"));
+  if (!(await allowFromIp("donation"))) errorRedirect(returnPath, TOO_MANY);
   const parsed = publicDonationSchema.safeParse({
     campaignId: formData.get("campaignId") || undefined,
     name: formData.get("name"),
@@ -40,7 +50,6 @@ export async function startPublicDonation(formData: FormData) {
     message: formData.get("message") || undefined,
     anonymous: formData.get("anonymous") === "on",
   });
-  const returnPath = String(formData.get("returnPath") || "/donate");
   if (!parsed.success) errorRedirect(returnPath, parsed.error.issues[0]?.message ?? "Please check the form.");
   const d = parsed.data;
 

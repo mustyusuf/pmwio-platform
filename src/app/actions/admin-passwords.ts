@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { ADMIN_PASSWORD_MANAGEABLE_ROLES, ROLES } from "@/lib/roles";
-import { hashPassword } from "@/lib/auth";
+import { passwordUpdate } from "@/lib/auth";
 import { isEmailConfigured, link, send } from "@/lib/email";
 import { passwordChangedByAdmin, passwordReset } from "@/lib/email-templates";
 import { createPasswordResetLink } from "@/lib/password-reset";
@@ -60,7 +60,7 @@ export async function setMemberPassword(
   const { user } = target;
 
   await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(parsed.data) } }),
+    prisma.user.update({ where: { id: user.id }, data: await passwordUpdate(parsed.data) }),
     prisma.passwordReset.updateMany({ where: { userId: user.id, used: false }, data: { used: true } }),
     prisma.activityLog.create({
       data: {

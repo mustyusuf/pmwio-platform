@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 import { send, recipientsByRole } from "@/lib/email";
 import { contactAlert, contactReceived } from "@/lib/email-templates";
+import { allowFromIp, TOO_MANY } from "@/lib/rate-limit";
 
 export type ContactState = { ok?: boolean; error?: string } | null;
 
@@ -12,10 +13,11 @@ const schema = z.object({
   name: z.string().trim().min(2, "Please enter your name."),
   email: z.email("Enter a valid email address."),
   subject: z.string().trim().optional(),
-  message: z.string().trim().min(10, "Please write a longer message."),
+  message: z.string().trim().min(10, "Please write a longer message.").max(5000, "Please keep your message under 5,000 characters."),
 });
 
 export async function submitContact(_prev: ContactState, formData: FormData): Promise<ContactState> {
+  if (!(await allowFromIp("contact"))) return { error: TOO_MANY };
   const parsed = schema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),

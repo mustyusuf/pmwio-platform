@@ -2,13 +2,17 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
-import { hashPassword, generateReference } from "@/lib/auth";
-import { uniqueUserId } from "@/app/actions/auth";
+import { getCurrentUser } from "@/lib/session";
+import { hashPassword, generateReference, MIN_PASSWORD_LENGTH } from "@/lib/auth";
+import { allowFromIp, TOO_MANY } from "@/lib/rate-limit";
+import { uniqueUserId } from "@/lib/user-id";
+import { issueEmailVerification } from "@/lib/email-verification";
 import { ROLES, parseStates } from "@/lib/roles";
 import { saveUpload } from "@/lib/uploads";
 import { send } from "@/lib/email";
 import { applicationSubmitted, refereeReferral } from "@/lib/email-templates";
+
+const RESERVED_FIELD_KEYS = new Set(["purpose", "coverLetter", "whyNeeded", "sustainabilityPlan"]);
 
 export type ApplyState =
   | { ok: true; reference: string; userId?: string; createdAccount: boolean }
@@ -25,6 +29,7 @@ export type ValidateRefereeResult =
  * are referred by a Member.
  */
 export async function validateReferee(rawRefereeId: string, category?: string): Promise<ValidateRefereeResult> {
+  if (!(await allowFromIp("lookup"))) return { ok: false, error: TOO_MANY };
   const refereeId = rawRefereeId.trim().toUpperCase();
   if (!refereeId) return { ok: false, error: "Please enter a Referee ID." };
 
@@ -70,14 +75,15 @@ const applySchema = z
     // Orphanage-specific
     classType: z.string().trim().optional(),
     need: z.string().trim().optional(),
-    details: z.string().trim().min(10, "Please tell us a little more (at least 10 characters)."),
+    details: z.string().trim().min(10, "Please tell us a little more (at least 10 characters).").max(10000, "Please keep this under 10,000 characters."),
     refereeId: z.string().trim().min(1, "A valid Referee ID is required to apply."),
-    password: z.string().optional(),
-    confirmPassword: z.string().optional(),
+    password: z.string().max(100).optional(),
+    confirmPassword: z.string().max(100).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, { message: "Passwords do not match.", path: ["confirmPassword"] });
 
 export async function submitApplication(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
+  if (!(await allowFromIp("apply"))) return { ok: false, error: TOO_MANY };
   const raw: Record<string, unknown> = {};
   for (const key of [
     "category", "firstName", "lastName", "email", "contactPhone", "country", "address",
@@ -121,18 +127,18 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
   const fullName = `${d.firstName} ${d.lastName}`.trim();
 
   // Determine the beneficiary account.
-  const session = await getSession();
+  const session = await getCurrentUser();
   let beneficiaryId: string | undefined;
   let createdAccount = false;
   let newUserId: string | undefined;
 
   if (session && session.role === ROLES.BENEFICIARY) {
-    beneficiaryId = session.sub;
+    beneficiaryId = session.id;
   } else if (session) {
     beneficiaryId = undefined;
   } else {
-    if (!d.password || d.password.length < 6) {
-      return { ok: false, error: "Please set a password (at least 6 characters) so you can track your application." };
+    if (!d.password || d.password.length < MIN_PASSWORD_LENGTH) {
+      return { ok: false, error: `Please set a password (at least ${MIN_PASSWORD_LENGTH} characters) so you can track your application.` };
     }
     const existing = await prisma.user.findUnique({ where: { email: d.email } });
     if (existing) {
@@ -143,8 +149,12 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
       data: {
         name: fullName, email: d.email, passwordHash: await hashPassword(d.password),
         phone: d.contactPhone, country: d.country, role: ROLES.BENEFICIARY, userId: newUserId,
+        // Anyone can type any email here, so the account stays locked until its
+        // owner confirms it — otherwise someone could squat a stranger's address.
+        emailVerified: false,
       },
     });
+    await issueEmailVerification(beneficiary);
     beneficiaryId = beneficiary.id;
     createdAccount = true;
   }
@@ -166,8 +176,10 @@ export async function submitApplication(_prev: ApplyState, formData: FormData): 
     where: { active: true, category: { in: [d.category, "ALL"] } },
   });
   for (const f of customFields) {
+    // A custom field must never overwrite a built-in one (or the rich-text keys).
+    if (f.name in extra || RESERVED_FIELD_KEYS.has(f.name)) continue;
     const v = formData.get(f.name);
-    if (typeof v === "string" && v.trim()) extra[f.name] = v.trim();
+    if (typeof v === "string" && v.trim()) extra[f.name] = v.trim().slice(0, 2000);
   }
 
   // Optional uploads — validate before persisting anything.

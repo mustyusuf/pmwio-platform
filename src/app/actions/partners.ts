@@ -24,7 +24,7 @@ function revalidatePartners() {
 
 const schema = z.object({
   name: z.string().trim().min(2, "Enter the organization or supporter's name."),
-  url: z.string().trim().url("Enter a valid URL, or leave it blank.").optional().or(z.literal("")),
+  url: z.string().trim().url("Enter a valid URL, or leave it blank.").refine((u) => /^https?:\/\//i.test(u), "The link must start with http:// or https://.").optional().or(z.literal("")),
   kind: z.enum(["PARTNER", "SUPPORTER"]),
 });
 

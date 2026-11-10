@@ -62,7 +62,7 @@ export async function createArchiveItem(_prev: ArchiveState, formData: FormData)
 
   if (parsed.data.mediaType === "VIDEO_LINK" || parsed.data.mediaType === "AUDIO_LINK") {
     const raw = String(formData.get("url") ?? "").trim();
-    const urlCheck = z.string().url().safeParse(raw);
+    const urlCheck = z.string().url().refine((u) => /^https?:\/\//i.test(u)).safeParse(raw);
     if (!urlCheck.success) return { error: "Enter a valid link (starting with https://)." };
     url = urlCheck.data;
   } else {

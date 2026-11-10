@@ -5,45 +5,23 @@ import crypto from "node:crypto";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { hashPassword, verifyPassword, generateUserId } from "@/lib/auth";
+import { hashPassword, verifyPassword, burnPasswordCheck, generateUserId, MIN_PASSWORD_LENGTH } from "@/lib/auth";
+import { allowFromIp, rateLimit, resetRateLimit, LIMITS, TOO_MANY } from "@/lib/rate-limit";
 import { createSession, destroySession } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
-import { send, link, recipientsByRole } from "@/lib/email";
+import { send, recipientsByRole } from "@/lib/email";
+import { issueEmailVerification } from "@/lib/email-verification";
+import { uniqueUserId } from "@/lib/user-id";
 import { getSettings } from "@/lib/settings";
-import { memberRegistrationPending, memberRegistrationAlert, verifyEmail } from "@/lib/email-templates";
+import { memberRegistrationPending, memberRegistrationAlert } from "@/lib/email-templates";
 
 export type AuthState = { error?: string; pending?: boolean } | null;
-
-/**
- * Issues a fresh single-use email-verification token for a user and emails them
- * the confirmation link (#3). Any earlier unused tokens are invalidated so only
- * the latest link works. Best-effort: never throws.
- */
-async function issueEmailVerification(user: { id: string; name: string; email: string }) {
-  await prisma.emailVerification.updateMany({ where: { userId: user.id, used: false }, data: { used: true } });
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  await prisma.emailVerification.create({
-    data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24) }, // 24h
-  });
-  await send(user.email, verifyEmail(user.name, link(`/verify-email?token=${token}`)));
-}
-
-/** Find an unused public User ID, retrying on the rare chance of a collision. */
-export async function uniqueUserId(): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const candidate = generateUserId();
-    const existing = await prisma.user.findUnique({ where: { userId: candidate } });
-    if (!existing) return candidate;
-  }
-  throw new Error("Could not generate a unique User ID. Please try again.");
-}
 
 const registerSchema = z
   .object({
     name: z.string().trim().min(2, "Please enter your full name."),
     email: z.email("Enter a valid email address.").toLowerCase(),
-    password: z.string().min(6, "Password must be at least 6 characters."),
+    password: z.string().min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`).max(100, "Password is too long."),
     confirmPassword: z.string(),
     phone: z.string().trim().optional(),
     country: z.string().trim().optional(),
@@ -57,6 +35,7 @@ export async function registerAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  if (!(await allowFromIp("register"))) return { error: TOO_MANY };
   const parsed = registerSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -115,6 +94,7 @@ export async function loginAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  if (!(await allowFromIp("login"))) return { error: TOO_MANY };
   const parsed = loginSchema.safeParse({
     identifier: formData.get("identifier"),
     password: formData.get("password"),
@@ -126,13 +106,19 @@ export async function loginAction(
 
   // Sign in with User ID or email.
   const id = parsed.data.identifier;
+  // Also limit per account, so a distributed guessing run against one person
+  // is throttled no matter how many IPs it comes from.
+  const accountKey = `login-account:${id.toLowerCase()}`;
+  if (!rateLimit(accountKey, LIMITS.loginAccount.limit, LIMITS.loginAccount.windowMs)) return { error: TOO_MANY };
   const user = await prisma.user.findFirst({
     where: { OR: [{ email: id.toLowerCase() }, { userId: id.toUpperCase() }] },
   });
 
-  if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
+  const passwordOk = user ? await verifyPassword(parsed.data.password, user.passwordHash) : await burnPasswordCheck(parsed.data.password);
+  if (!user || !passwordOk) {
     return { error: "Incorrect User ID / email or password." };
   }
+  resetRateLimit(accountKey);
   if (!user.emailVerified) {
     return { error: "Please confirm your email address first. Check your inbox for the confirmation link, or request a new one at /verify-email." };
   }
@@ -182,6 +168,11 @@ export async function verifyEmailToken(rawToken: string): Promise<VerifyEmailRes
   await prisma.user.update({ where: { id: record.userId }, data: { emailVerified: true } });
   await prisma.activityLog.create({ data: { userId: record.userId, action: "EMAIL_VERIFIED", detail: record.user.email } });
 
+  // Applicants (beneficiaries) confirm their email the same way, but the
+  // member welcome email and the "validate this member" staff alerts are only
+  // for people who registered as members.
+  if (record.user.role !== ROLES.MEMBER) return { ok: true };
+
   // Email #1 — the member can now sign in; no approval wait.
   await send(record.user.email, memberRegistrationPending(record.user.name));
 
@@ -215,6 +206,7 @@ export type ResendVerificationState = { ok?: boolean; error?: string } | null;
 /** Re-send the verification link. Responds identically whether or not a matching
  *  unverified account exists, to avoid leaking which emails are registered. */
 export async function resendVerification(_prev: ResendVerificationState, formData: FormData): Promise<ResendVerificationState> {
+  if (!(await allowFromIp("verification"))) return { error: TOO_MANY };
   const identifier = String(formData.get("identifier") ?? "").trim();
   if (!identifier) return { error: "Enter your User ID or email." };
 

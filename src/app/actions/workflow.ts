@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { hashPassword, generateReference } from "@/lib/auth";
-import { uniqueUserId } from "@/app/actions/auth";
+import { uniqueUserId } from "@/lib/user-id";
+import { withLock } from "@/lib/lock";
 import { ROLES, ROLE_LABEL } from "@/lib/roles";
 import { SCHOLARSHIP_MAX_AWARD } from "@/lib/content";
 import { getSettings, eligibleCount, clampQuorum, tally } from "@/lib/settings";
@@ -78,15 +79,19 @@ async function castApplicationVote(opts: {
   const app = await prisma.application.findUnique({ where: { id } });
   if (!app || app.status !== expectedStatus) redirect("/dashboard");
 
-  // One vote per reviewer per stage.
-  const already = await prisma.review.findFirst({ where: { applicationId: id, reviewerId: me.id, reviewerRole: stage } });
-  if (already) redirect("/dashboard");
-
   const recommendation =
     stage === "BOARD"
       ? decision === "APPROVE" ? "RECOMMEND_APPROVE" : "RECOMMEND_REJECT"
       : decision === "APPROVE" ? "APPROVE" : "REJECT";
-  await prisma.review.create({ data: { applicationId: id, reviewerId: me.id, reviewerRole: stage, recommendation, comment: comment || null } });
+  // One vote per reviewer per stage. Checked and recorded under a lock so
+  // parallel requests can't each slip past the check and stack up votes.
+  const recorded = await withLock(`vote:${id}:${me.id}:${stage}`, async () => {
+    const already = await prisma.review.findFirst({ where: { applicationId: id, reviewerId: me.id, reviewerRole: stage } });
+    if (already) return false;
+    await prisma.review.create({ data: { applicationId: id, reviewerId: me.id, reviewerRole: stage, recommendation, comment: comment || null } });
+    return true;
+  });
+  if (!recorded) redirect("/dashboard");
 
   const votes = await prisma.review.findMany({ where: { applicationId: id, reviewerRole: stage } });
   const { approve, reject } = tally(votes);
@@ -215,10 +220,13 @@ export async function castPaymentVote(formData: FormData) {
   const payment = await prisma.payment.findUnique({ where: { id }, include: { application: true } });
   if (!payment || payment.status !== expectedStatus) redirect("/dashboard");
 
-  const already = await prisma.paymentApproval.findFirst({ where: { paymentId: id, approverId: me.id, role: level } });
-  if (already) redirect("/dashboard");
-
-  await prisma.paymentApproval.create({ data: { paymentId: id, approverId: me.id, role: level, decision, comment: comment || null } });
+  const recorded = await withLock(`payvote:${id}:${me.id}:${level}`, async () => {
+    const already = await prisma.paymentApproval.findFirst({ where: { paymentId: id, approverId: me.id, role: level } });
+    if (already) return false;
+    await prisma.paymentApproval.create({ data: { paymentId: id, approverId: me.id, role: level, decision, comment: comment || null } });
+    return true;
+  });
+  if (!recorded) redirect("/dashboard");
 
   const votes = await prisma.paymentApproval.findMany({ where: { paymentId: id, role: level } });
   const { approve, reject } = tally(votes);

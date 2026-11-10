@@ -33,10 +33,11 @@ export type SessionPayload = {
   code: string; // public User ID (PMW-XXXXXX)
   name: string;
   role: string;
+  iat?: number; // issued-at (seconds), from the verified token
 };
 
 /** Signs a session JWT and stores it in an httpOnly cookie. */
-export async function createSession(payload: SessionPayload): Promise<void> {
+export async function createSession(payload: Omit<SessionPayload, "iat">): Promise<void> {
   const token = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -65,6 +66,7 @@ export async function getSession(): Promise<SessionPayload | null> {
       code: String(payload.code),
       name: String(payload.name),
       role: String(payload.role),
+      iat: typeof payload.iat === "number" ? payload.iat : undefined,
     };
   } catch {
     return null;
@@ -77,6 +79,8 @@ export async function getCurrentUser() {
   if (!session) return null;
   const user = await prisma.user.findUnique({ where: { id: session.sub } });
   if (!user || !user.active) return null;
+  // A password change (or reset) revokes every session issued before it.
+  if (user.sessionsValidFrom && (session.iat ?? 0) < Math.floor(user.sessionsValidFrom.getTime() / 1000)) return null;
   return user;
 }
 
@@ -84,4 +88,10 @@ export async function getCurrentUser() {
 export async function destroySession(): Promise<void> {
   const store = await cookies();
   store.delete(COOKIE_NAME);
+}
+
+/** Whether the signed-in user may preview content that is hidden from the public (drafts, inactive entries). */
+export async function canPreviewHidden(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return Boolean(user && (user.role === "ADMIN" || user.role === "EXECUTIVE"));
 }

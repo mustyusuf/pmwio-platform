@@ -25,6 +25,24 @@ const ALLOWED_AUDIO_MIME: Record<string, string> = {
   "audio/x-wav": "wav",
 };
 
+/**
+ * The browser-reported MIME type is just a claim the uploader controls, so an
+ * HTML or script file could be labelled "image/png". Check that the file's
+ * opening bytes really are what it says.
+ */
+async function matchesSignature(file: Blob, mime: string): Promise<boolean> {
+  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const at = (offset: number, text: string) => [...text].every((c, i) => b[offset + i] === c.charCodeAt(0));
+  switch (mime) {
+    case "image/jpeg": return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+    case "image/png": return b[0] === 0x89 && at(1, "PNG");
+    case "image/gif": return at(0, "GIF8");
+    case "image/webp": return at(0, "RIFF") && at(8, "WEBP");
+    case "application/pdf": return at(0, "%PDF");
+    default: return false;
+  }
+}
+
 export type SavedFile = { storedName: string; mimeType: string; size: number; originalName: string };
 export type SaveResult = { ok: true; file: SavedFile } | { ok: false; error: string };
 
@@ -43,6 +61,7 @@ export async function saveUpload(file: File | null, opts: { imagesOnly?: boolean
   const mime = file.type;
   if (!ALLOWED_MIME.has(mime)) return { ok: false, error: "Unsupported file type. Upload a JPG, PNG, GIF, WEBP or PDF." };
   if (opts.imagesOnly && !mime.startsWith("image/")) return { ok: false, error: "Please upload an image file." };
+  if (!(await matchesSignature(file, mime))) return { ok: false, error: "That file doesn't look like a valid JPG, PNG, GIF, WEBP or PDF. Please upload a different file." };
 
   const ext = mime === "application/pdf" ? "pdf" : mime.split("/")[1];
   return { ok: true, file: await writeToUploads(file, mime, ext, file.name) };

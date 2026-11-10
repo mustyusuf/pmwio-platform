@@ -13,17 +13,17 @@
     "db:setup": "prisma migrate deploy"
   },
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-better-sqlite3": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.3",
     "lucide-react": "^1.21.0",
-    "next": "16.2.7",
-    "nodemailer": "^7.0.13",
+    "next": "16.4.6",
+    "nodemailer": "^10.5.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -34,8 +34,8 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.7",
-    "prisma": "^7.8.0",
+    "eslint-config-next": "16.4.6",
+    "prisma": "^7.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5"

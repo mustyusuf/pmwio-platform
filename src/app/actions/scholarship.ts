@@ -19,13 +19,13 @@ export async function setScholarshipPeriod(formData: FormData) {
   const endRaw = String(formData.get("end") ?? "");
   const app = await prisma.application.findUnique({ where: { id } });
   if (!app || app.category !== "SCHOLARSHIP") redirect("/dashboard");
+  const start = startRaw ? new Date(startRaw) : null;
+  const end = endRaw ? new Date(endRaw) : null;
+  if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) redirect(`/dashboard/applications/${id}`);
 
   await prisma.application.update({
     where: { id },
-    data: {
-      scholarshipStart: startRaw ? new Date(startRaw) : null,
-      scholarshipEnd: endRaw ? new Date(endRaw) : null,
-    },
+    data: { scholarshipStart: start, scholarshipEnd: end },
   });
   await prisma.activityLog.create({ data: { userId: me.id, action: "SCHOLARSHIP_PERIOD_SET", detail: `${app.reference}: ${startRaw || "—"} → ${endRaw || "—"}` } });
   revalidatePath(`/dashboard/applications/${id}`);
@@ -39,7 +39,7 @@ export async function renewScholarship(formData: FormData) {
 
   const id = String(formData.get("applicationId"));
   const app = await prisma.application.findUnique({ where: { id } });
-  if (!app || app.category !== "SCHOLARSHIP") redirect("/dashboard");
+  if (!app || app.category !== "SCHOLARSHIP" || app.status !== "APPROVED") redirect("/dashboard");
 
   // Only the owning beneficiary or staff may renew.
   const allowed = isStaff(me.role) || app.beneficiaryId === me.id;

@@ -77,8 +77,10 @@ export async function submitEmpowerment(_prev: EmpowermentState, formData: FormD
   });
   const custom: Record<string, string> = {};
   for (const f of customFields) {
+    // A custom field must never overwrite the sanitised rich-text answers.
+    if (["purpose", "coverLetter", "whyNeeded", "sustainabilityPlan"].includes(f.name)) continue;
     const v = formData.get(f.name);
-    if (typeof v === "string" && v.trim()) custom[f.name] = v.trim();
+    if (typeof v === "string" && v.trim()) custom[f.name] = v.trim().slice(0, 2000);
   }
 
   const reference = generateReference();

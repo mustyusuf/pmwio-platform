@@ -15,6 +15,7 @@ import { setScholarshipPeriod, renewScholarship } from "@/app/actions/scholarshi
 import { TermReportForm } from "@/components/dashboard/TermReportForm";
 import { DateInput } from "@/components/dashboard/DateInput";
 import { humanSize } from "@/lib/uploads";
+import { sanitizeRichText } from "@/lib/sanitize";
 
 export const metadata: Metadata = { title: "Application" };
 
@@ -170,7 +171,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 extra[k] ? (
                   <div key={k}>
                     <p className="text-xs font-semibold uppercase tracking-wider text-brand-600">{humanize(k)}</p>
-                    <div className="rich-html mt-1 text-brand-900/80" dangerouslySetInnerHTML={{ __html: extra[k] }} />
+                    <div className="rich-html mt-1 text-brand-900/80" dangerouslySetInnerHTML={{ __html: sanitizeRichText(extra[k]) }} />
                   </div>
                 ) : null,
               )}

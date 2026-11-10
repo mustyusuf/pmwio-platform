@@ -69,7 +69,7 @@ export function ApplyForm({
         <p className="mt-3 inline-block rounded-lg bg-white px-4 py-2 font-mono text-lg font-bold tracking-wider text-emerald-900 ring-1 ring-emerald-200">{state.reference}</p>
         {state.createdAccount && state.userId && (
           <div className="mt-4 rounded-xl bg-white p-4 text-sm text-emerald-900 ring-1 ring-emerald-200">
-            We created an account so you can track your application. Your <strong>User ID</strong> is <span className="font-mono font-bold">{state.userId}</span> — log in with it (or your email) and the password you chose.
+            We created an account so you can track your application. Your <strong>User ID</strong> is <span className="font-mono font-bold">{state.userId}</span> — once you have confirmed your email address you can log in with it (or your email) and the password you chose. We have sent you a confirmation link; please check your inbox (and spam folder).
           </div>
         )}
         <div className="mt-6 flex justify-center gap-4">
