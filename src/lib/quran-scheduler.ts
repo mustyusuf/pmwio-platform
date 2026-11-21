@@ -10,41 +10,38 @@ import { retryRecentFailures } from "@/lib/email-tracking";
 // register() can run again on the same process.
 const globalForScheduler = globalThis as unknown as { quranSchedulerStarted?: boolean };
 
-// Polled (rather than a single 24h setTimeout) so the 6am send still happens
-// on schedule even if the process was restarted a few hours earlier — the
-// individual checks below guard their own idempotency, so ticking every 10
-// minutes just narrows how late a 6am job can start.
+// Polled every few minutes (rather than one timed send) so nothing depends on
+// being up at a particular moment: after a restart, a redeploy or an outage the
+// next tick catches up and sends whatever is due — the current week's verse
+// announcement, any reminder owed, last month's recap, and retries for emails
+// that failed. Every job guards its own idempotency (notifiedAt,
+// reminderCount/lastReminderSentAt, the recap month, per-recipient delivery
+// status), so frequent ticks never double-send.
 const CHECK_INTERVAL_MS = 10 * 60 * 1000;
-// Mornings (West Africa Time): the Qur'an emails go out from 6:00am, and any
-// that were missed — the app was restarting or redeploying, or the mail server
-// was briefly down — are picked up on a later tick that morning rather than
-// waiting a whole day. Each job guards its own idempotency, so extra ticks in
-// the window never double-send.
-const SEND_FROM_HOUR_LAGOS = 6;
-const SEND_UNTIL_HOUR_LAGOS = 12; // exclusive
+// Reminders are the one thing that shouldn't land in the middle of the night:
+// one that falls due overnight simply goes out from 6am.
+const REMINDERS_FROM_HOUR_LAGOS = 6;
 const RECONCILE_HOUR_LAGOS = 6;
 
-async function runDailyJobs() {
-  // Only the time-sensitive, member-facing Qur'an Challenge emails wait for
-  // the morning window; the audio purge has no reason to and runs every tick.
+export async function runDailyJobs() {
   const hour = lagosHour();
-  if (hour >= SEND_FROM_HOUR_LAGOS && hour < SEND_UNTIL_HOUR_LAGOS) {
-    await notifyMembersOfLiveVerse().catch((err) => {
-      console.error("[quran] live verse announcement failed:", err);
-    });
+  await notifyMembersOfLiveVerse().catch((err) => {
+    console.error("[quran] live verse announcement failed:", err);
+  });
+  if (hour >= REMINDERS_FROM_HOUR_LAGOS) {
     await checkAndSendReminders().catch((err) => {
       console.error("[quran] weekly verse reminder check failed:", err);
     });
-    await checkMonthlyLeaderboardEmail().catch((err) => {
-      console.error("[quran] monthly leaderboard email check failed:", err);
-    });
-    await retryRecentFailures().catch((err) => {
-      console.error("[quran] retrying failed emails failed:", err);
-    });
   }
+  await checkMonthlyLeaderboardEmail().catch((err) => {
+    console.error("[quran] monthly leaderboard email check failed:", err);
+  });
+  await retryRecentFailures().catch((err) => {
+    console.error("[quran] retrying failed emails failed:", err);
+  });
   // Not Qur'an-specific, but this is the app's only daily job runner: settle
   // donations stuck as PENDING (abandoned checkouts, missed webhooks). Once a
-  // day is plenty, so it keeps to the first hour of the window.
+  // day is plenty, so it keeps to the 6am hour.
   if (hour === RECONCILE_HOUR_LAGOS) {
     await reconcilePendingDonations().catch((err) => {
       console.error("[paystack] pending donation reconcile failed:", err);

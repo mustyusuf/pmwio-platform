@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { getMonthlyLeaderboard } from "@/lib/leaderboard";
+import { isEmailConfigured } from "@/lib/email";
 import { sendTrackedBulk, sendTrackedIndividual } from "@/lib/email-tracking";
 import { monthlyTopReciters, monthlyTopReciterCongrats } from "@/lib/email-templates";
 import { ROLES } from "@/lib/roles";
@@ -57,6 +58,9 @@ export async function sendMonthlyRecap(start: Date, end: Date, triggeredById?: s
  * nothing to report, e.g. no recitations that month).
  */
 export async function checkMonthlyLeaderboardEmail() {
+  // Marking a month "done" when no email could be sent is how a recap gets
+  // silently skipped; wait until the mail server is configured instead.
+  if (!isEmailConfigured()) return;
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);

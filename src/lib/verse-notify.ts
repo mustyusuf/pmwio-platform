@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
+import { isEmailConfigured } from "@/lib/email";
 import { sendTrackedBulk } from "@/lib/email-tracking";
 import { weeklyVerseLive } from "@/lib/email-templates";
 
@@ -41,12 +42,35 @@ export async function notifyMembersOfLiveVerse(): Promise<string | null> {
   });
   if (due.length === 0) return null;
 
+  // Without a working mail setup the announcement would be marked as sent
+  // without anyone receiving it. Hold it instead; the scheduler tries again
+  // every few minutes and it goes out as soon as email is configured.
+  if (!isEmailConfigured()) {
+    console.warn(`[quran] holding the announcement for "${due[0].reference}" — SMTP isn't configured`);
+    return null;
+  }
+
   // Only the newest one is "this week's verse" (see /dashboard/quran). Any
   // older unannounced verses were superseded — stamp them so they never fire.
   const [live, ...stale] = due;
-  await prisma.verse.updateMany({ where: { id: { in: due.map((v) => v.id) } }, data: { notifiedAt: now } });
+  const ids = due.map((v) => v.id);
+  // Claim atomically so overlapping runs (a tick and a publish click) can't both announce.
+  const claimed = await prisma.verse.updateMany({ where: { id: { in: ids }, notifiedAt: null }, data: { notifiedAt: now } });
+  if (claimed.count === 0) return null;
   if (stale.length) console.info(`[quran] skipped announcing ${stale.length} superseded verse(s)`);
 
+  try {
+    await announce(live);
+  } catch (error) {
+    // Something broke before the announcement finished (e.g. the database):
+    // un-claim it so the next tick tries again rather than losing it.
+    await prisma.verse.updateMany({ where: { id: { in: ids } }, data: { notifiedAt: null } });
+    throw error;
+  }
+  return live.reference;
+}
+
+async function announce(live: { id: string; reference: string; translation: string }) {
   const members = await prisma.user.findMany({
     where: { active: true, role: ROLES.MEMBER },
     select: { id: true },
@@ -63,5 +87,4 @@ export async function notifyMembersOfLiveVerse(): Promise<string | null> {
 
   // Email #35 — bcc broadcast so members don't see each other's addresses.
   await emailVerseToMembers(live);
-  return live.reference;
 }

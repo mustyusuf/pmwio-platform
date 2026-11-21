@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { isEmailConfigured } from "@/lib/email";
 import { sendTrackedBulk } from "@/lib/email-tracking";
 import { weeklyVerseReminder } from "@/lib/email-templates";
 import { ROLES } from "@/lib/roles";
@@ -41,6 +42,8 @@ export async function emailReminderToPending(verse: { id: string; reference: str
  * lastReminderSentAt guard against duplicates either way.
  */
 export async function checkAndSendReminders(): Promise<void> {
+  // Don't burn one of the week's reminders when nothing can be delivered.
+  if (!isEmailConfigured()) return;
   const verse = await prisma.verse.findFirst({
     where: { publishedAt: { not: null }, weekOf: { lte: new Date() } },
     orderBy: { weekOf: "desc" },

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { dispatchEmail, orgEmailAddress, type DeliveryOutcome, type Mail } from "@/lib/email";
+import { dispatchEmail, isEmailConfigured, orgEmailAddress, type DeliveryOutcome, type Mail } from "@/lib/email";
 
 // ---------------------------------------------------------------------------
 // Delivery log. Every member-facing blast that admins may need to follow up on
@@ -166,18 +166,20 @@ export async function retryFailedDeliveries(
 }
 
 const AUTO_RETRY_KINDS = ["VERSE_LIVE", "VERSE_REMINDER"];
-const AUTO_RETRY_MAX_ATTEMPTS = 3; // the first send counts as attempt 1
+const AUTO_RETRY_MAX_ATTEMPTS = 5; // the first send counts as attempt 1
 const AUTO_RETRY_MIN_GAP_MS = 30 * 60 * 1000;
-const AUTO_RETRY_WINDOW_MS = 24 * 3600 * 1000;
+const AUTO_RETRY_WINDOW_MS = 7 * 24 * 3600 * 1000; // a challenge week
 
 /**
  * Re-sends the member-facing Qur'an emails to anyone they failed for (a mail
  * host that was briefly down or over its hourly limit), so a hiccup doesn't
  * silently cost members their announcement or reminder. Each recipient gets
- * a couple of tries, spaced out, within a day of the original send; after
+ * a few tries, spaced out, within a week of the original send; after
  * that an admin can still retry from the Email Delivery page.
  */
 export async function retryRecentFailures() {
+  // No point (and no attempts to spend) while email isn't configured.
+  if (!isEmailConfigured()) return;
   const campaigns = await prisma.emailCampaign.findMany({
     where: {
       kind: { in: AUTO_RETRY_KINDS },
